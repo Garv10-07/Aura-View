@@ -34,4 +34,5 @@ class PredictionManager:
             return max(0, round(predicted_value))
         except Exception as e:
             print(f"❌ Prediction karne mein error: {e}")
+            print(f"❌❌❌ PREDICTION FAILED! Error: {e}")
             return 0
