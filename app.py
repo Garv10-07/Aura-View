@@ -84,8 +84,7 @@ async def video_processing_loop():
         try:
             print(f"📡 yt-dlp se YouTube stream ({INPUT_SOURCE}) ka URL nikaal raha hoon...")
             # --- Use cookie file option ---
-            ydl_opts = {'format': 'best', 'noplaylist': True, 'cookiefile': COOKIE_FILE}
-            # Check if cookie file exists IN THE CURRENT DIRECTORY
+            ydl_opts = {'format': 'best', 'noplaylist': True, 'cookiefile': COOKIE_FILE}# Check if cookie file exists IN THE CURRENT DIRECTORY
             if not os.path.exists(COOKIE_FILE):
                  print(f"⚠️ Warning: Cookie file '{COOKIE_FILE}' nahin mili in the current folder. Authentication fail ho sakti hai.")
                  # Remove cookie option if file not found
