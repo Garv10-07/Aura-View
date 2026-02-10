@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuraView</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap');
+
+    :root{
+      --bg1:#0a0e27;
+      --bg2:#1a1a3e;
+
+      --panel1:rgba(26,26,62,0.85);
+      --panel2:rgba(40,40,80,0.55);
+
+      --mint:#00ff87;
+      --cyan:#00d4ff;
+      --muted:#a0a0d0;
+      --text:#e0e0e0;
+
+      --danger:#ff4757;
+      --warn:#ffc107;
+      --border:rgba(0,255,135,0.15);
+    }
+
+    body{
+      font-family:'Poppins',sans-serif;
+      background: linear-gradient(135deg, var(--bg1), var(--bg2));
+      color: var(--text);
+      min-height:100vh;
+      overflow-y:auto;
+    }
+
+    .wrap{
+      width: min(1400px, 96vw);
+      margin: 18px auto;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+
+    .hidden{ display:none !important; }
+
+    /* Animation for smooth transition */
+    .fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .panel{
+      border-radius:22px;
+      padding:20px;
+      background: linear-gradient(135deg, var(--panel1) 0%, var(--panel2) 100%);
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.35), inset 0 0 18px rgba(0,255,135,0.05);
+      backdrop-filter: blur(12px);
+    }
+
+    /* TOPBAR */
+    .topbar{
+      display:flex;
+      justify-content:space-between;
+      align-items:center;
+      gap:14px;
+    }
+    .title{
+      font-size:1.7rem;
+      font-weight:900;
+      background: linear-gradient(135deg, var(--mint), var(--cyan));
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+      color:transparent;
+      display:flex;
+      gap:12px;
+      align-items:center;
+    }
+
+    .badge{
+      padding:10px 14px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,0.10);
+      background: rgba(255,255,255,0.05);
+      display:flex;
+      align-items:center;
+      gap:8px;
+      font-weight:800;
+      color:var(--muted);
+      min-width:170px;
+      justify-content:center;
+    }
+    .dot{ width:10px;height:10px;border-radius:50%; background:#777; }
+    .dot.connected{ background: var(--mint); box-shadow: 0 0 15px rgba(0,255,135,0.45); }
+
+    .btn{
+      cursor:pointer;
+      border:none;
+      border-radius:14px;
+      padding:12px 14px;
+      font-weight:900;
+      letter-spacing:.2px;
+      color:#071020;
+      background: linear-gradient(135deg, var(--mint), var(--cyan));
+      transition: transform .15s ease;
+      display:inline-flex;
+      gap:10px;
+      align-items:center;
+      justify-content:center;
+    }
+    .btn:hover{ transform: translateY(-1px); }
+    .btn.secondary{
+      background: rgba(255,255,255,0.05);
+      border:1px solid rgba(255,255,255,0.12);
+      color:#dbe6ff;
+    }
+
+    .btn:disabled{
+      opacity:0.75;
+      cursor:not-allowed;
+      transform:none !important;
+    }
+
+    /* AUTH + SETUP layout */
+    .two-col{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:18px;
+      align-items:stretch;
+    }
+    @media(max-width:1000px){ .two-col{ grid-template-columns:1fr; } }
+
+    .field{ display:flex; flex-direction:column; gap:6px; }
+    .field label{
+      font-size:.85rem; font-weight:900;
+      text-transform:uppercase; letter-spacing:1px;
+      color: var(--muted);
+    }
+    .input, .select{
+      width:100%;
+      padding:12px 14px;
+      border-radius:14px;
+      border:1px solid rgba(255,255,255,0.10);
+      background: rgba(0,0,0,0.22);
+      outline:none;
+      color: #fff;
+      font-weight:700;
+      font-size:1rem;
+    }
+    .input:focus, .select:focus{
+      border-color: rgba(0,255,135,0.35);
+      box-shadow: 0 0 0 3px rgba(0,255,135,0.12);
+    }
+
+    .msg{ min-height:22px; color:var(--muted); font-weight:700; }
+    .msg.error{ color: var(--danger); }
+    .msg.success{ color: var(--mint); }
+
+    /* DASHBOARD LAYOUT */
+    .details-grid{
+      display:grid;
+      grid-template-columns: 1.2fr 1fr 1fr 1fr;
+      gap:14px;
+    }
+    @media(max-width:1100px){ .details-grid{ grid-template-columns: 1fr 1fr; } }
+    @media(max-width:650px){ .details-grid{ grid-template-columns: 1fr; } }
+
+    .big-card{
+      grid-column: span 2;
+      border-radius:20px;
+      padding:18px;
+      background: rgba(0,0,0,0.18);
+      border:1px solid rgba(255,255,255,0.08);
+    }
+    @media(max-width:1100px){ .big-card{ grid-column: span 2; } }
+    @media(max-width:650px){ .big-card{ grid-column: span 1; } }
+
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+
+    .status{
+      padding:8px 12px;
+      border-radius:999px;
+      font-weight:900;
+      letter-spacing:.8px;
+      font-size:.78rem;
+      border:1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      text-transform:uppercase;
+      display:flex;
+      gap:8px;
+      align-items:center;
+    }
+    .status.safe{ color: var(--mint); border-color: rgba(0,255,135,0.30); }
+    .status.mod{ color: var(--warn); border-color: rgba(255,193,7,0.45); }
+    .status.danger{ color: var(--danger); border-color: rgba(255,71,87,0.55); }
+
+    .count{
+      font-family:'Roboto Mono', monospace;
+      font-size:4.3rem;
+      font-weight:900;
+      margin: 10px 0 6px;
+      background: linear-gradient(135deg, var(--mint), var(--cyan));
+      -webkit-background-clip:text;
+      background-clip:text;
+      -webkit-text-fill-color:transparent;
+      color:transparent;
+      line-height:1;
+    }
+
+    .mini{
+      border-radius:18px;
+      padding:16px;
+      border:1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.04);
+      display:flex;
+      flex-direction:column;
+      gap:6px;
+    }
+    .mini .label{
+      text-transform:uppercase;
+      font-weight:900;
+      letter-spacing:1px;
+      color:#b0b3da;
+      font-size:.78rem;
+    }
+    .mini .value{
+      font-family:'Roboto Mono', monospace;
+      font-weight:900;
+      font-size:1.9rem;
+      color: var(--mint);
+    }
+    .mini .hint{ color: var(--muted); font-weight:700; font-size:.9rem; }
+
+    /* chart */
+    .chart-wrap{ height: 360px; padding: 6px; }
+    @media(max-width:650px){ .chart-wrap{ height: 300px; } }
+
+    /* video */
+    .video-box{
+      border-radius:18px;
+      overflow:hidden;
+      border:2px solid rgba(0,255,135,0.18);
+      background: linear-gradient(135deg,#000,#161632);
+      min-height: 360px;
+      position:relative;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+    }
+    .video-box img{ width:100%; height:auto; display:block; object-fit:contain; }
+
+    .video-banner{
+      position:absolute;
+      top: 12px; left:12px; right:12px;
+      display:flex;
+      justify-content:space-between;
+      gap:10px;
+      align-items:center;
+      padding:10px 14px;
+      border-radius:14px;
+      background: rgba(0,0,0,0.35);
+      border:1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(12px);
+      font-weight:900;
+      color:#dce0ff;
+    }
+
+    /* blink */
+    @keyframes dangerBlink{0%,100%{box-shadow:0 0 0 rgba(255,71,87,0)}50%{box-shadow:0 0 45px rgba(255,71,87,0.35)}}
+    .blink{ animation: dangerBlink 1.15s ease-in-out infinite; border-color: rgba(255,71,87,0.45)!important; }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+
+    <section id="pageHome" class="fade-in">
+        <div class="panel topbar" style="background:transparent; border:none; box-shadow:none;">
+            <div class="title"><i class="fa-solid fa-eye"></i> AuraView</div>
+            <div id="btnHomeLogin" class="btn secondary" style="padding:10px 20px;">Admin Portal</div>
+        </div>
+
+        <div style="text-align:center; margin: 40px auto; max-width: 800px;">
+            <h1 style="font-size: 3.5rem; font-weight: 900; line-height: 1.2; margin-bottom: 20px;">
+                Intelligent <br>
+                <span style="background: linear-gradient(135deg, var(--mint), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Crowd Surveillance</span>
+            </h1>
+            <p style="color: var(--muted); font-size: 1.1rem; margin-bottom: 30px; font-weight: 500;">
+                Real-time density monitoring, AI-powered prediction, and automated safety alerts. 
+                Securing spaces with next-gen computer vision.
+            </p>
+            
+            <button id="btnGetStarted" class="btn" style="padding: 16px 32px; font-size: 1.1rem;">
+                Get Started <i class="fa-solid fa-arrow-right" style="margin-left: 8px;"></i>
+            </button>
+        </div>
+
+        <div class="two-col" style="margin-top: 50px;">
+            <div class="panel" style="text-align:left;">
+                <div style="width:50px; height:50px; background:rgba(0,255,135,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:15px;">
+                    <i class="fa-solid fa-video" style="color:var(--mint); font-size:1.5rem;"></i>
+                </div>
+                <h3 style="color:#fff; margin-bottom:10px;">Live Detection</h3>
+                <p style="color:var(--muted); font-size:0.9rem;">Powered by YOLOv8 to detect and count individuals in real-time with high accuracy.</p>
+            </div>
+            <div class="panel" style="text-align:left;">
+                <div style="width:50px; height:50px; background:rgba(0,212,255,0.1); border-radius:12px; display:flex; align-items:center; justify-content:center; margin-bottom:15px;">
+                    <i class="fa-solid fa-chart-line" style="color:var(--cyan); font-size:1.5rem;"></i>
+                </div>
+                <h3 style="color:#fff; margin-bottom:10px;">Predictive Analytics</h3>
+                <p style="color:var(--muted); font-size:0.9rem;">Forecasts crowd density trends to prevent overcrowding before it happens.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pageAuth" class="hidden">
+      <div class="panel topbar">
+        <div class="title"><i class="fa-solid fa-eye"></i> AuraView</div>
+        <div class="badge"><i class="fa-solid fa-lock"></i> Login Required</div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2 style="font-size:2rem;font-weight:900;background:linear-gradient(135deg,var(--mint),var(--cyan));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent;">
+            AuraView Control Room
+          </h2>
+          <p style="margin-top:10px;color:var(--muted);font-weight:700;line-height:1.7;">
+            Login / Signup to start monitoring. Next step me aap source select karoge
+            (YouTube / Webcam / RTSP) aur threshold set karoge.
+          </p>
+          <p style="margin-top:16px;color:var(--muted);font-weight:800;">
+            ✅ YOLO Detection • ✅ Prediction • ✅ Alerts • ✅ Supabase Auth • ✅ Clusters • ✅ Heatmap
+          </p>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex; gap:10px;">
+            <div id="tabLogin" class="btn secondary" style="flex:1;">Login</div>
+            <div id="tabSignup" class="btn secondary" style="flex:1;">Sign Up</div>
+          </div>
+
+          <div style="margin-top:16px; display:flex; flex-direction:column; gap:12px;">
+            <div class="field">
+              <label>Email</label>
+              <input id="authEmail" class="input" placeholder="Enter email" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input id="authPass" type="password" class="input" placeholder="Enter password" />
+            </div>
+
+            <div id="authMsg" class="msg"></div>
+
+            <button id="btnAuth" class="btn">Login</button>
+            
+            <button id="btnBackHome" class="btn secondary" style="margin-top:10px;">Back to Home</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pageSetup" class="hidden">
+      <div class="panel topbar">
+        <div class="title"><i class="fa-solid fa-sliders"></i> Setup</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div class="badge"><i class="fa-solid fa-user"></i> Logged in</div>
+          <button id="btnLogout1" class="btn secondary"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2 style="font-size:1.4rem;font-weight:900;color:#dfe2ff;">Step 2: Select Source</h2>
+          <p style="margin-top:8px;color:var(--muted);font-weight:700;line-height:1.7;">
+            Source apply karne ke baad dashboard start ho jayega (backend IDLE se RUN mode).
+          </p>
+
+          <div style="margin-top:16px; display:flex; flex-direction:column; gap:14px;">
+            <div class="field">
+              <label>Source Type</label>
+              <select id="sourceType" class="select">
+                <option value="youtube">YouTube</option>
+                <option value="webcam">Webcam</option>
+                <option value="rtsp">RTSP</option>
+              </select>
+            </div>
+
+            <div class="field">
+              <label>Source Value</label>
+              <input id="sourceValue" class="input" placeholder="YouTube link OR webcam index (0) OR rtsp://..." />
+            </div>
+
+            <div class="field">
+              <label>Alert Threshold</label>
+              <input id="thresholdValue" type="number" class="input" value="10" min="1" />
+            </div>
+
+            <div id="setupMsg" class="msg"></div>
+
+            <button id="btnApply" class="btn"><i class="fa-solid fa-play"></i> Apply & Start Dashboard</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 style="font-size:1.2rem;font-weight:900;color:#dfe2ff;">Examples</h2>
+          <div style="margin-top:12px;color:var(--muted);font-weight:800;line-height:1.8;">
+            <div>📌 <b style="color:var(--mint)">YouTube:</b> https://www.youtube.com/watch?v=FyFAqPHBKiQ</div>
+            <div>📌 <b style="color:var(--mint)">Webcam:</b> 0</div>
+            <div>📌 <b style="color:var(--mint)">RTSP:</b> rtsp://user:pass@ip:554/stream</div>
+            <div style="margin-top:12px;">✅ Apply click ke baad live count + feed show hoga.</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pageDash" class="hidden">
+
+      <div class="panel topbar">
+        <div class="title"><i class="fa-solid fa-eye"></i> Dashboard</div>
+        <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <div class="badge">
+            <span id="connDot" class="dot"></span>
+            <span id="connText">Disconnected</span>
+          </div>
+
+          <button id="btnHeatmap" class="btn secondary">
+            <i class="fa-solid fa-fire"></i> Heatmap: OFF
+          </button>
+
+          <button id="btnTrain" class="btn">
+            <i class="fa-solid fa-brain"></i> Train Model
+          </button>
+
+          <button id="btnBackSetup" class="btn secondary"><i class="fa-solid fa-sliders"></i> Setup</button>
+          <button id="btnLogout2" class="btn secondary"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="details-grid">
+
+          <div id="liveCard" class="big-card">
+            <div class="row">
+              <div id="statusBadge" class="status safe"><i class="fa-solid fa-shield"></i> SAFE</div>
+              <div class="status safe" style="opacity:.9;">
+                <i class="fa-solid fa-bullseye"></i> Threshold:
+                <span id="thLabel">10</span>
+              </div>
+              <div class="status safe" style="opacity:.9;">
+                <i class="fa-solid fa-people-group"></i> Cluster Th:
+                <span id="clusterThLabel">6</span>
+              </div>
+            </div>
+
+            <div id="count" class="count">0</div>
+            <div id="prediction" class="msg" style="font-size:1.02rem;">Prediction: ~0</div>
+            <div class="msg">Source: <b id="sourceLabel">None</b></div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Max Today</div>
+            <div class="value" id="statMax">0</div>
+            <div class="hint">Highest count</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Average</div>
+            <div class="value" id="statAvg">0</div>
+            <div class="hint">Mean crowd</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Accuracy</div>
+            <div class="value" id="statAcc">--</div>
+            <div class="hint">Prediction deviation</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Alert Status</div>
+            <div class="value" id="statStatus">SAFE</div>
+            <div class="hint">Realtime label</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Clusters</div>
+            <div class="value" id="statClusters">0</div>
+            <div class="hint">Detected groups</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Largest Cluster</div>
+            <div class="value" id="statLargest">0</div>
+            <div class="hint">Biggest group</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Congestion</div>
+            <div class="value" id="statCong">0%</div>
+            <div class="hint">Local density</div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Risk Score</div>
+            <div class="value" id="statRisk">0</div>
+            <div class="hint">0-100</div>
+          </div>
+
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-weight:900;color:#dfe2ff;text-transform:uppercase;letter-spacing:1px;">
+            <i class="fa-solid fa-chart-line" style="color:var(--mint)"></i> Trend Analysis
+          </div>
+          <div class="msg">Live vs Prediction</div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="liveChart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-weight:900;color:#dfe2ff;text-transform:uppercase;letter-spacing:1px;">
+            <i class="fa-solid fa-video" style="color:var(--mint)"></i> Live Feed
+          </div>
+          <div class="msg">MJPEG Stream</div>
+        </div>
+
+        <div id="videoBox" class="video-box">
+          <div class="video-banner">
+            <div><i class="fa-solid fa-circle" style="color:var(--mint)"></i> LIVE</div>
+            <div id="feedRight">Status: SAFE • Count: 0</div>
+          </div>
+          <img id="videoFeed" src="/video_feed" alt="Loading stream..." />
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // ==============================
+    //  SUPABASE CONFIG (PASTE HERE)
+    // ==============================
+    const SUPABASE_URL = "https://xcslmtmhsrwhqrysjxcz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhjc2xtdG1oc3J3aHFyeXNqeGN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MTExMTIsImV4cCI6MjA4NTE4NzExMn0.q9aZNvjUsg8wZUXNNSEMQHzhsVxuxaS44tbPYFsSqC8";
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    // ==============================
+    //  DOM
+    // ==============================
+    const pageHome = document.getElementById("pageHome"); // NEW
+    const pageAuth = document.getElementById("pageAuth");
+    const pageSetup = document.getElementById("pageSetup");
+    const pageDash = document.getElementById("pageDash");
+
+    // Home buttons
+    const btnGetStarted = document.getElementById("btnGetStarted");
+    const btnHomeLogin = document.getElementById("btnHomeLogin");
+    const btnBackHome = document.getElementById("btnBackHome");
+
+    const tabLogin = document.getElementById("tabLogin");
+    const tabSignup = document.getElementById("tabSignup");
+    const btnAuth = document.getElementById("btnAuth");
+    const authMsg = document.getElementById("authMsg");
+
+    const authEmail = document.getElementById("authEmail");
+    const authPass = document.getElementById("authPass");
+
+    const btnLogout1 = document.getElementById("btnLogout1");
+    const btnLogout2 = document.getElementById("btnLogout2");
+    const btnBackSetup = document.getElementById("btnBackSetup");
+
+    const sourceType = document.getElementById("sourceType");
+    const sourceValue = document.getElementById("sourceValue");
+    const thresholdValue = document.getElementById("thresholdValue");
+    const btnApply = document.getElementById("btnApply");
+    const setupMsg = document.getElementById("setupMsg");
+
+    const connDot = document.getElementById("connDot");
+    const connText = document.getElementById("connText");
+
+    const liveCard = document.getElementById("liveCard");
+    const statusBadge = document.getElementById("statusBadge");
+    const statStatus = document.getElementById("statStatus");
+    const feedRight = document.getElementById("feedRight");
+
+    const countEl = document.getElementById("count");
+    const predEl = document.getElementById("prediction");
+
+    const thLabel = document.getElementById("thLabel");
+    const clusterThLabel = document.getElementById("clusterThLabel");
+    const sourceLabel = document.getElementById("sourceLabel");
+    const statMax = document.getElementById("statMax");
+    const statAvg = document.getElementById("statAvg");
+    const statAcc = document.getElementById("statAcc");
+
+    // ✅ NEW cluster DOM
+    const statClusters = document.getElementById("statClusters");
+    const statLargest = document.getElementById("statLargest");
+    const statCong = document.getElementById("statCong");
+    const statRisk = document.getElementById("statRisk");
+
+    // ✅ NEW: buttons
+    const btnTrain = document.getElementById("btnTrain");
+    const btnHeatmap = document.getElementById("btnHeatmap");
+
+    // ==============================
+    //  STATE
+    // ==============================
+    let authMode = "login";
+    let socket = null;
+    let alertActive = false;
+    let heatmapEnabled = false;
+
+    const alertSound = new Audio("https://actions.google.com/sounds/v1/alarms/beep_short.ogg");
+    alertSound.volume = 0.9;
+
+    let stats = { max:0, sum:0, n:0, accSum:0 };
+
+    function showPage(name){
+      pageHome.classList.add("hidden");
+      pageAuth.classList.add("hidden");
+      pageSetup.classList.add("hidden");
+      pageDash.classList.add("hidden");
+
+      if(name==="home") pageHome.classList.remove("hidden");
+      if(name==="auth") pageAuth.classList.remove("hidden");
+      if(name==="setup") pageSetup.classList.remove("hidden");
+      if(name==="dash") pageDash.classList.remove("hidden");
+    }
+
+    // HOME BUTTONS LOGIC
+    btnGetStarted.onclick = () => showPage("auth");
+    btnHomeLogin.onclick = () => showPage("auth");
+    btnBackHome.onclick = () => showPage("home");
+
+    function setConn(connected){
+      if(connected){
+        connDot.classList.add("connected");
+        connText.innerText = "Connected";
+      } else {
+        connDot.classList.remove("connected");
+        connText.innerText = "Disconnected";
+      }
+    }
+
+    tabLogin.onclick = ()=>{
+      authMode = "login";
+      tabLogin.style.opacity = "1";
+      tabSignup.style.opacity = "0.65";
+      btnAuth.innerText = "Login";
+      authMsg.innerText = "";
+    };
+    tabSignup.onclick = ()=>{
+      authMode = "signup";
+      tabSignup.style.opacity = "1";
+      tabLogin.style.opacity = "0.65";
+      btnAuth.innerText = "Sign Up";
+      authMsg.innerText = "";
+    };
+    tabSignup.style.opacity = "0.65";
+
+    async function getToken(){
+      const { data, error } = await sb.auth.getSession();
+      if (error) return null;
+      return data?.session?.access_token || null;
+    }
+
+    async function api(path, method="GET", body=null){
+      const token = await getToken();
+      const headers = { "Content-Type":"application/json" };
+      if(token) headers.Authorization = "Bearer " + token;
+
+      const res = await fetch("http://127.0.0.1:8000" + path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : null
+      });
+      const json = await res.json().catch(()=> ({}));
+      if(!res.ok){
+        throw new Error(json?.detail || "API Error");
+      }
+      return json;
+    }
+
+    async function doAuth(){
+      authMsg.className="msg";
+      authMsg.innerText="Processing...";
+
+      const email = authEmail.value.trim();
+      const password = authPass.value.trim();
+      if(!email || !password){
+        authMsg.className="msg error";
+        authMsg.innerText="Enter email and password.";
+        return;
+      }
+
+      let res;
+      if(authMode==="signup"){
+        res = await sb.auth.signUp({ email, password });
+      } else {
+        res = await sb.auth.signInWithPassword({ email, password });
+      }
+
+      if(res.error){
+        authMsg.className="msg error";
+        authMsg.innerText=res.error.message;
+        return;
+      }
+
+      if(authMode==="signup"){
+        authMsg.className="msg success";
+        authMsg.innerText="Signup done ✅ Now login.";
+        return;
+      }
+
+      authMsg.className="msg success";
+      authMsg.innerText="Login success ✅";
+      showPage("setup");
+      await loadConfig();
+    }
+
+    btnAuth.onclick = doAuth;
+
+    async function logout(){
+      try { await sb.auth.signOut(); } catch(e){}
+      disconnectSocket();
+      showPage("home"); // Changed to Home
+    }
+
+    btnLogout1.onclick = logout;
+    btnLogout2.onclick = logout;
+
+    btnBackSetup.onclick = ()=>{
+      disconnectSocket();
+      showPage("setup");
+    };
+
+    async function loadConfig(){
+      try{
+        const cfg = await api("/config");
+        if(cfg.threshold) thresholdValue.value = cfg.threshold;
+        if(cfg.cluster_threshold) clusterThLabel.innerText = cfg.cluster_threshold;
+        if(typeof cfg.heatmap === "boolean"){
+          heatmapEnabled = cfg.heatmap;
+          updateHeatmapBtn();
+        }
+      }catch(e){}
+    }
+
+    // ✅ Train model button handler
+    btnTrain.onclick = async ()=>{
+      btnTrain.disabled = true;
+      const original = btnTrain.innerHTML;
+      btnTrain.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Training...`;
+
+      try{
+        const res = await api("/train_model", "POST", {});
+        if(res.success){
+          alert("✅ Model trained successfully!\nPoints used: " + res.points);
+        } else {
+          alert("❌ Training failed: " + (res.error || "Unknown error"));
+        }
+      }catch(e){
+        alert("❌ Training failed: " + e.message);
+      }
+
+      btnTrain.disabled = false;
+      btnTrain.innerHTML = original;
+    };
+
+    // ✅ Heatmap Toggle (default OFF)
+    function updateHeatmapBtn(){
+      btnHeatmap.innerHTML = heatmapEnabled
+        ? `<i class="fa-solid fa-fire"></i> Heatmap: ON`
+        : `<i class="fa-solid fa-fire"></i> Heatmap: OFF`;
+    }
+
+    btnHeatmap.onclick = async ()=>{
+      try{
+        heatmapEnabled = !heatmapEnabled;
+        updateHeatmapBtn();
+        await api("/set_heatmap", "POST", { enabled: heatmapEnabled });
+
+        // reload video so it starts showing immediately
+        document.getElementById("videoFeed").src = "/video_feed?ts=" + Date.now();
+      }catch(e){
+        alert("❌ Heatmap toggle failed: " + e.message);
+      }
+    };
+
+    // ==============================
+    // APPLY SETUP -> START DASHBOARD
+    // ==============================
+    btnApply.onclick = async ()=>{
+      setupMsg.className="msg";
+      setupMsg.innerText="Applying settings...";
+
+      const type = sourceType.value;
+      const value = sourceValue.value.trim();
+      const threshold = parseInt(thresholdValue.value || "10");
+
+      if(!value){
+        setupMsg.className="msg error";
+        setupMsg.innerText="Please enter Source Value";
+        return;
+      }
+
+      try{
+        const thRes = await api("/set_threshold","POST",{ threshold });
+        await api("/set_source","POST",{ type, value });
+
+        thLabel.innerText = threshold;
+        sourceLabel.innerText = type;
+
+        // cluster threshold from backend
+        if(thRes.cluster_threshold) clusterThLabel.innerText = thRes.cluster_threshold;
+
+        setupMsg.className="msg success";
+        setupMsg.innerText="✅ Started! Loading dashboard...";
+
+        // Reset stats
+        stats = { max:0, sum:0, n:0, accSum:0 };
+        statMax.innerText="0";
+        statAvg.innerText="0";
+        statAcc.innerText="--";
+
+        // reset cluster ui
+        statClusters.innerText = "0";
+        statLargest.innerText = "0";
+        statCong.innerText = "0%";
+        statRisk.innerText = "0";
+
+        // reload video
+        document.getElementById("videoFeed").src = "/video_feed?ts=" + Date.now();
+
+        showPage("dash");
+        connectSocket();
+      }catch(e){
+        setupMsg.className="msg error";
+        setupMsg.innerText="❌ " + e.message;
+      }
+    };
+
+    // ==============================
+    // SOCKET + CHART
+    // ==============================
+    const ctx = document.getElementById("liveChart").getContext("2d");
+    const liveChart = new Chart(ctx, {
+      type:"line",
+      data:{
+        labels:[],
+        datasets:[
+          {
+            label:"Live Count",
+            data:[],
+            borderColor:"#00ff87",
+            backgroundColor:"rgba(0,255,135,0.14)",
+            fill:true,
+            tension:0.4,
+            borderWidth:3,
+            pointRadius:4
+          },
+          {
+            label:"Predicted Count",
+            data:[],
+            borderColor:"#00d4ff",
+            backgroundColor:"rgba(0,212,255,0.10)",
+            borderDash:[6,6],
+            fill:false,
+            tension:0.4,
+            borderWidth:2,
+            pointRadius:3
+          }
+        ]
+      },
+      options:{
+        responsive:true,
+        maintainAspectRatio:false,
+        scales:{
+          y:{ beginAtZero:true, ticks:{ color:"#a0a0d0" }, grid:{ color:"rgba(255,255,255,0.08)" }},
+          x:{ ticks:{ color:"#a0a0d0" }, grid:{ display:false }}
+        },
+        plugins:{ legend:{ labels:{ color:"#a0a0d0", font:{ weight:"700" }}}}
+      }
+    });
+
+    function addChartPoint(count, pred){
+      const t = new Date().toLocaleTimeString();
+      liveChart.data.labels.push(t);
+      liveChart.data.datasets[0].data.push(count);
+      liveChart.data.datasets[1].data.push(pred);
+
+      if(liveChart.data.labels.length > 25){
+        liveChart.data.labels.shift();
+        liveChart.data.datasets.forEach(ds=>ds.data.shift());
+      }
+      liveChart.update("none");
+    }
+
+    function applyStatus(status, count, clusterAlert=false, riskScore=0){
+      statStatus.innerText = status;
+      feedRight.innerText = `Status: ${status} • Count: ${count}`;
+
+      statusBadge.className = "status " + (status==="DANGER"?"danger":status==="MODERATE"?"mod":"safe");
+      statusBadge.innerHTML =
+        status==="DANGER"
+          ? '<i class="fa-solid fa-triangle-exclamation"></i> DANGER'
+          : status==="MODERATE"
+            ? '<i class="fa-solid fa-circle-exclamation"></i> MODERATE'
+            : '<i class="fa-solid fa-shield"></i> SAFE';
+
+      // ✅ NEW: alert trigger conditions
+      const trigger = (status==="DANGER") || (clusterAlert===true) || (riskScore>=70);
+
+      if(trigger){
+        liveCard.classList.add("blink");
+        if(!alertActive){
+          alertActive = true;
+          try{ alertSound.currentTime=0; alertSound.play(); }catch(e){}
+          document.title = "🚨 AuraView ALERT!";
+        }
+      }else{
+        liveCard.classList.remove("blink");
+        if(alertActive){
+          alertActive = false;
+          document.title = "AuraView";
+        }
+      }
+    }
+
+    function disconnectSocket(){
+      try{
+        if(socket){ socket.disconnect(); socket=null; }
+      }catch(e){}
+      setConn(false);
+    }
+
+    function connectSocket(){
+      disconnectSocket();
+      socket = io("http://127.0.0.1:8000", { path: "/ws" });
+
+      socket.on("connect", ()=>setConn(true));
+      socket.on("disconnect", ()=>setConn(false));
+
+      socket.on("broadcast_data", (data)=>{
+        const count = data.count || 0;
+        const pred = data.prediction || 0;
+        const status = (data.alert_status || "SAFE").toUpperCase();
+        const threshold = data.alert_threshold || parseInt(thLabel.innerText || "10");
+
+        // ✅ cluster fields
+        const clusters = data.cluster_count || 0;
+        const largest = data.largest_cluster || 0;
+        const congestion = data.congestion_score || 0;
+        const risk = data.risk_score || 0;
+        const clusterAlert = !!data.cluster_alert;
+        const clusterTh = data.cluster_threshold || 0;
+
+        countEl.innerText = count;
+        predEl.innerText = "Prediction: ~" + pred;
+
+        thLabel.innerText = threshold;
+        if(clusterTh) clusterThLabel.innerText = clusterTh;
+
+        // stats
+        stats.max = Math.max(stats.max, count);
+        stats.sum += count;
+        stats.n += 1;
+        statMax.innerText = stats.max;
+        statAvg.innerText = Math.round(stats.sum / stats.n);
+
+        const deviation = Math.abs(count - pred);
+        stats.accSum += (100 - Math.min(deviation * 10, 100));
+        statAcc.innerText = Math.round(stats.accSum / stats.n) + "%";
+
+        // ✅ cluster ui
+        statClusters.innerText = clusters;
+        statLargest.innerText = largest;
+        statCong.innerText = Math.round(congestion * 100) + "%";
+        statRisk.innerText = risk;
+
+        applyStatus(status, count, clusterAlert, risk);
+        addChartPoint(count, pred);
+
+        // If heatmap state comes from backend
+        if(typeof data.heatmap_enabled === "boolean"){
+          heatmapEnabled = data.heatmap_enabled;
+          updateHeatmapBtn();
+        }
+      });
+    }
+
+    // ==============================
+    // INIT (session restore)
+    // ==============================
+    async function init(){
+      const token = await getToken();
+      if(token){
+        showPage("setup");
+        await loadConfig();
+      } else {
+        showPage("home"); // Changed to start at Home
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>
