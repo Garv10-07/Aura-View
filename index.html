@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AuraView | Intelligent Surveillance</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/particles.js@2.0.0/particles.min.js"></script>
+
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Mono:wght@400;700&display=swap');
+
+    :root{
+      --bg1:#0a0e27;
+      --bg2:#1a1a3e;
+
+      --panel1:rgba(26,26,62,0.75);
+      --panel2:rgba(40,40,80,0.45);
+
+      --mint:#00ff87;
+      --cyan:#00d4ff;
+      --muted:#a0a0d0;
+      --text:#e0e0e0;
+
+      --danger:#ff4757;
+      --warn:#ffc107;
+      --border:rgba(0,255,135,0.15);
+      
+      --trans-speed: 0.3s;
+      --bounce: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
+    ::-webkit-scrollbar-track { background: var(--bg1); }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--mint); }
+    ::selection { background: var(--mint); color: #000; }
+
+    body{
+      font-family:'Poppins',sans-serif;
+      background: linear-gradient(125deg, #050714, #0a0e27, #1a1a3e, #050714);
+      background-size: 400% 400%;
+      animation: gradientBG 20s ease infinite;
+      color: var(--text);
+      min-height:100vh;
+      overflow-y:auto;
+      overflow-x:hidden;
+    }
+
+    @keyframes gradientBG {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .wrap{
+      width: min(1400px, 96vw);
+      margin: 18px auto;
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+    }
+
+    .hidden{ display:none !important; }
+
+    .fade-in { animation: fadeInUp 0.6s var(--bounce); }
+    @keyframes fadeInUp { 
+      from { opacity: 0; transform: translateY(30px) scale(0.98); } 
+      to { opacity: 1; transform: translateY(0) scale(1); } 
+    }
+
+    .stagger-1 { animation-delay: 0.1s; }
+    .stagger-2 { animation-delay: 0.2s; }
+
+    .panel{
+      border-radius:22px;
+      padding:24px;
+      background: linear-gradient(135deg, var(--panel1) 0%, var(--panel2) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      box-shadow: 0 12px 40px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.05);
+      backdrop-filter: blur(20px);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .big-card:hover, .mini:hover, .panel:hover {
+        border-color: rgba(0,255,135,0.25);
+    }
+
+    .topbar{
+      display:flex; justify-content:space-between; align-items:center; gap:14px;
+    }
+    .title{
+      font-size:1.7rem; font-weight:900;
+      background: linear-gradient(90deg, var(--mint), var(--cyan));
+      -webkit-background-clip:text; background-clip:text;
+      -webkit-text-fill-color:transparent; color:transparent;
+      display:flex; gap:12px; align-items:center;
+      filter: drop-shadow(0 0 15px rgba(0,255,135,0.3));
+    }
+
+    .badge{
+      padding:8px 16px; border-radius:999px;
+      border:1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.3);
+      display:flex; align-items:center; gap:10px; font-weight:700;
+      color:var(--muted); min-width:170px; justify-content:center;
+      transition: all 0.3s ease;
+    }
+    .badge:hover { background: rgba(255,255,255,0.1); color: #fff; }
+    .dot{ width:10px;height:10px;border-radius:50%; background:#555; transition: all 0.5s ease; }
+    .dot.connected{ background: var(--mint); box-shadow: 0 0 15px var(--mint); transform: scale(1.2); }
+
+    .btn{
+      cursor:pointer; border:none; border-radius:14px;
+      padding:14px 24px; font-weight:800; letter-spacing:0.5px;
+      color:#071020;
+      background: linear-gradient(135deg, var(--mint), var(--cyan));
+      position: relative; overflow: hidden; z-index: 1;
+      transition: all 0.3s var(--bounce);
+      box-shadow: 0 4px 15px rgba(0, 212, 255, 0.2);
+    }
+    .btn:hover:not(:disabled){ transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0, 255, 135, 0.5); }
+    .btn:active:not(:disabled){ transform: translateY(1px) scale(0.98); box-shadow: 0 2px 10px rgba(0, 255, 135, 0.3); }
+
+    .btn.secondary{
+      background: transparent;
+      border:1px solid rgba(255,255,255,0.2);
+      color:#dbe6ff; box-shadow: none;
+    }
+    .btn.secondary:hover{ 
+      background: rgba(255,255,255,0.1); border-color: #fff; color: #fff; 
+      box-shadow: 0 5px 15px rgba(255,255,255,0.1);
+    }
+    .btn:disabled{ opacity:0.6; cursor:not-allowed; filter: grayscale(1); }
+
+    .two-col{ display:grid; grid-template-columns: 1fr 1fr; gap:25px; align-items:stretch; }
+    @media(max-width:1000px){ .two-col{ grid-template-columns:1fr; } }
+
+    .field{ display:flex; flex-direction:column; gap:8px; position: relative; }
+    .field label{ font-size:.8rem; font-weight:800; text-transform:uppercase; letter-spacing:1px; color: var(--muted); transition: color 0.3s; }
+    .input, .select{
+      width:100%; padding:14px 16px; border-radius:14px;
+      border:1px solid rgba(255,255,255,0.10); background: rgba(0,0,0,0.3);
+      outline:none; color: #fff; font-weight:600; font-size:1rem; transition: all 0.3s ease;
+    }
+    .input:focus, .select:focus{
+      border-color: var(--cyan); box-shadow: 0 0 15px rgba(0, 212, 255, 0.15);
+      background: rgba(0,0,0,0.5); transform: scale(1.01);
+    }
+    .field:focus-within label { color: var(--cyan); }
+
+    .msg{ min-height:22px; color:var(--muted); font-weight:600; font-size: 0.9rem; transition: all 0.3s; }
+    .msg.error{ color: var(--danger); animation: shake 0.4s ease-in-out; }
+    @keyframes shake { 0%, 100% {transform: translateX(0);} 25% {transform: translateX(-5px);} 75% {transform: translateX(5px);} }
+    .msg.success{ color: var(--mint); }
+
+    .details-grid{ display:grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap:18px; }
+    @media(max-width:1100px){ .details-grid{ grid-template-columns: 1fr 1fr; } }
+    @media(max-width:650px){ .details-grid{ grid-template-columns: 1fr; } }
+
+    .big-card{
+      grid-column: span 2; border-radius:20px; padding:22px;
+      background: linear-gradient(145deg, rgba(255,255,255,0.08), rgba(0,0,0,0.2));
+      border:1px solid rgba(255,255,255,0.08); position: relative; overflow: hidden;
+    }
+    .big-card::after {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(to right, transparent, rgba(255,255,255,0.03), transparent);
+        transform: skewX(-20deg) translateX(-150%);
+        animation: sheen 6s infinite; pointer-events: none;
+    }
+    @keyframes sheen { 100% { transform: skewX(-20deg) translateX(150%); } }
+
+    .row{ display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+
+    .status{
+      padding:8px 16px; border-radius:999px; font-weight:800; letter-spacing:1px;
+      font-size:.7rem; border:1px solid rgba(255,255,255,0.1);
+      background: rgba(255,255,255,0.06); text-transform:uppercase;
+      display:flex; gap:8px; align-items:center; transition: all 0.3s;
+    }
+    .status.safe{ color: var(--mint); background: rgba(0, 255, 135, 0.1); box-shadow: 0 0 10px rgba(0,255,135,0.1); }
+    .status.mod{ color: var(--warn); background: rgba(255, 193, 7, 0.1); }
+    .status.danger{ color: var(--danger); background: rgba(255, 71, 87, 0.1); animation: pulseDanger 1s infinite; }
+    @keyframes pulseDanger { 0% { box-shadow: 0 0 0 0 rgba(255,71,87,0.4); } 70% { box-shadow: 0 0 0 10px rgba(255,71,87,0); } 100% { box-shadow: 0 0 0 0 rgba(255,71,87,0); } }
+
+    .count{
+      font-family:'Roboto Mono', monospace; font-size:4.5rem; font-weight:900;
+      margin: 15px 0 10px; background: linear-gradient(180deg, #fff, var(--cyan));
+      -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent;
+      color:transparent; line-height:1; text-shadow: 0 10px 30px rgba(0, 212, 255, 0.15);
+    }
+
+    .mini{
+      border-radius:18px; padding:18px; border:1px solid rgba(255,255,255,0.08);
+      background: rgba(0,0,0,0.2); display:flex; flex-direction:column; gap:6px;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .mini:hover { background: rgba(255,255,255,0.05); transform: translateY(-3px); }
+
+    .mini .label{ text-transform:uppercase; font-weight:800; letter-spacing:0.5px; color:#b0b3da; font-size:.7rem; }
+    .mini .value{ font-family:'Roboto Mono', monospace; font-weight:800; font-size:2rem; color: var(--mint); }
+    .mini .hint{ color: var(--muted); font-weight:600; font-size:.85rem; opacity: 0.8; }
+
+    .chart-wrap{ height: 360px; padding: 6px; background: transparent; }
+    @media(max-width:650px){ .chart-wrap{ height: 300px; } }
+
+    .video-box{
+      border-radius:18px; overflow:hidden; border:2px solid rgba(0,255,135,0.2);
+      background: linear-gradient(135deg,#000,#161632); min-height: 360px; position:relative;
+      display:flex; align-items:center; justify-content:center; box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    }
+    .video-box img{ width:100%; height:auto; display:block; object-fit:contain; }
+
+    .video-banner{
+      position:absolute; top: 15px; left:15px; right:15px; display:flex; justify-content:space-between;
+      gap:10px; align-items:center; padding:10px 16px; border-radius:12px;
+      background: rgba(0,0,0,0.6); border:1px solid rgba(255,255,255,0.10);
+      backdrop-filter: blur(8px); font-weight:800; color:#fff; font-size: 0.9rem;
+    }
+
+    .blink{ animation: dangerBlink 0.8s ease-in-out infinite; border-color: var(--danger) !important; box-shadow: 0 0 30px rgba(255, 71, 87, 0.2); }
+    @keyframes dangerBlink{ 50%{ border-color: transparent; opacity: 0.8; } }
+    
+    #particles-js { position: fixed; width: 100%; height: 100%; top: 0; left: 0; z-index: -1; }
+  </style>
+</head>
+
+<body>
+  <div id="particles-js"></div>
+
+  <div class="wrap">
+
+    <section id="pageHome" class="fade-in">
+        <div class="panel topbar" style="background:transparent; border:none; box-shadow:none;">
+            <div class="title" style="font-size: 2rem;"><i class="fa-solid fa-eye"></i> AuraView</div>
+            <div id="btnHomeLogin" class="btn secondary" style="padding:10px 24px;">Admin Portal</div>
+        </div>
+
+        <div style="text-align:center; margin: 60px auto; max-width: 800px;" class="fade-in stagger-1">
+            <h1 style="font-size: 4rem; font-weight: 900; line-height: 1.1; margin-bottom: 25px; text-shadow: 0 0 50px rgba(0,212,255,0.2);">
+                Intelligent <br>
+                <span style="background: linear-gradient(135deg, var(--mint), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">Crowd Surveillance</span>
+            </h1>
+            <p style="color: var(--muted); font-size: 1.2rem; margin-bottom: 40px; font-weight: 500; line-height: 1.6;">
+                Real-time density monitoring, AI-powered prediction, and automated safety alerts. 
+                Securing spaces with next-gen computer vision.
+            </p>
+            <button id="btnGetStarted" class="btn" style="padding: 18px 40px; font-size: 1.1rem; border-radius: 50px;">
+                Get Started <i class="fa-solid fa-arrow-right" style="margin-left: 10px;"></i>
+            </button>
+        </div>
+
+        <div class="two-col fade-in stagger-2" style="margin-top: 50px;">
+            <div class="panel hover-lift" style="text-align:left;">
+                <div style="width:60px; height:60px; background:rgba(0,255,135,0.1); border-radius:16px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; box-shadow: 0 0 20px rgba(0,255,135,0.1);">
+                    <i class="fa-solid fa-video" style="color:var(--mint); font-size:1.8rem;"></i>
+                </div>
+                <h3 style="color:#fff; margin-bottom:10px; font-size: 1.3rem;">Live Detection</h3>
+                <p style="color:var(--muted); font-size:0.95rem; line-height: 1.6;">Powered by YOLOv8 to detect and count individuals in real-time with high accuracy.</p>
+            </div>
+            <div class="panel hover-lift" style="text-align:left;">
+                <div style="width:60px; height:60px; background:rgba(0,212,255,0.1); border-radius:16px; display:flex; align-items:center; justify-content:center; margin-bottom:20px; box-shadow: 0 0 20px rgba(0,212,255,0.1);">
+                    <i class="fa-solid fa-chart-line" style="color:var(--cyan); font-size:1.8rem;"></i>
+                </div>
+                <h3 style="color:#fff; margin-bottom:10px; font-size: 1.3rem;">Predictive Analytics</h3>
+                <p style="color:var(--muted); font-size:0.95rem; line-height: 1.6;">Forecasts crowd density trends to prevent overcrowding before it happens.</p>
+            </div>
+        </div>
+    </section>
+
+    <section id="pageAuth" class="hidden fade-in">
+      <div class="panel topbar">
+        <div class="title"><i class="fa-solid fa-eye"></i> AuraView</div>
+        <div class="badge"><i class="fa-solid fa-lock"></i> Secure Access</div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel" style="display: flex; flex-direction: column; justify-content: center;">
+          <h2 style="font-size:2.5rem; font-weight:900; background:linear-gradient(135deg,var(--mint),var(--cyan)); -webkit-background-clip:text; background-clip:text; -webkit-text-fill-color:transparent; color:transparent; line-height: 1.2; margin-bottom: 20px;">
+            Control Room Login
+          </h2>
+          <p style="color:var(--muted); font-weight:600; line-height:1.8; font-size: 1.05rem;">
+            Authenticate to access the live monitoring dashboard. Configure input sources (YouTube / Webcam / RTSP) and safety thresholds in the next step.
+          </p>
+          <div style="margin-top: 30px; display: flex; gap: 15px;">
+              <span class="status safe"><i class="fa-solid fa-check"></i> Encrypted</span>
+              <span class="status safe"><i class="fa-solid fa-bolt"></i> Fast I/O</span>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div style="display:flex; gap:10px; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 16px; margin-bottom: 20px;">
+            <div id="tabLogin" class="btn" style="flex:1; box-shadow: none;">Login</div>
+            <div id="tabSignup" class="btn secondary" style="flex:1; border: none;">Sign Up</div>
+          </div>
+
+          <div style="display:flex; flex-direction:column; gap:15px;">
+            <div class="field">
+              <label>Email Address</label>
+              <input id="authEmail" class="input" placeholder="admin@auraview.com" />
+            </div>
+            <div class="field">
+              <label>Password</label>
+              <input id="authPass" type="password" class="input" placeholder="••••••••" />
+            </div>
+            <div id="authMsg" class="msg"></div>
+            <button id="btnAuth" class="btn" style="margin-top: 10px;">Secure Login</button>
+            <button id="btnBackHome" class="btn secondary" style="margin-top:0px;">Back to Home</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pageSetup" class="hidden fade-in">
+      <div class="panel topbar">
+        <div class="title"><i class="fa-solid fa-sliders"></i> Setup</div>
+        <div style="display:flex; gap:10px; align-items:center;">
+          <div class="badge"><i class="fa-solid fa-user"></i> Logged in</div>
+          <button id="btnLogout1" class="btn secondary"><i class="fa-solid fa-right-from-bracket"></i></button>
+        </div>
+      </div>
+
+      <div class="two-col">
+        <div class="panel">
+          <h2 style="font-size:1.5rem; font-weight:800; color:#fff; margin-bottom: 10px;">Select Input Source</h2>
+          <p style="color:var(--muted); font-weight:600; line-height:1.7; margin-bottom: 20px;">
+            Configure the video feed. Dashboard starts automatically after applying.
+          </p>
+
+          <div style="display:flex; flex-direction:column; gap:16px;">
+            <div class="field">
+              <label>Source Type</label>
+              <select id="sourceType" class="select">
+                <option value="youtube">YouTube Live</option>
+                <option value="webcam">Webcam (Device 0)</option>
+                <option value="rtsp">RTSP Stream</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>Source Value / URL</label>
+              <input id="sourceValue" class="input" placeholder="e.g. YouTube Link or 0" />
+            </div>
+            <div class="field">
+              <label>Safety Threshold</label>
+              <input id="thresholdValue" type="number" class="input" value="10" min="1" />
+            </div>
+            
+            <div class="field">
+              <label>Auto-Train Interval</label>
+              <select id="trainIntervalValue" class="select">
+                <option value="60000">Every 1 Minute</option>
+                <option value="120000" selected>Every 2 Minutes (Default)</option>
+                <option value="300000">Every 5 Minutes</option>
+              </select>
+            </div>
+
+            <div id="setupMsg" class="msg"></div>
+            <button id="btnApply" class="btn"><i class="fa-solid fa-play"></i> Initialize System</button>
+          </div>
+        </div>
+
+        <div class="panel">
+          <h2 style="font-size:1.3rem; font-weight:800; color:#fff; margin-bottom: 15px;">Configuration Guide</h2>
+          <div style="color:var(--muted); font-weight:600; line-height:2;">
+            <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 10px;">
+                📌 <b style="color:var(--mint)">YouTube:</b> Paste full video URL
+            </div>
+            <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 10px;">
+                📌 <b style="color:var(--mint)">Webcam:</b> Use '0' for default camera
+            </div>
+            <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px;">
+                📌 <b style="color:var(--mint)">RTSP:</b> rtsp://user:pass@ip:554
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="pageDash" class="hidden fade-in">
+      <div class="panel topbar" id="dashTopbar">
+        <div class="title"><i class="fa-solid fa-chart-pie"></i> Dashboard</div>
+        <div id="dashControls" style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+          <div class="badge">
+            <span id="connDot" class="dot"></span>
+            <span id="connText">Offline</span>
+          </div>
+
+          <button id="btnHeatmap" class="btn secondary" style="padding: 10px 18px;">
+            <i class="fa-solid fa-fire"></i> Heatmap
+          </button>
+
+          <button id="btnFS" class="btn secondary" style="padding: 10px;"><i class="fa-solid fa-expand"></i></button>
+          <button id="btnBackSetup" class="btn secondary" style="padding: 10px;"><i class="fa-solid fa-sliders"></i></button>
+          <button id="btnLogout2" class="btn secondary" style="padding: 10px;"><i class="fa-solid fa-power-off"></i></button>
+        </div>
+      </div>
+
+      <div class="panel" id="dashboardContent">
+        <div class="details-grid">
+          <div id="liveCard" class="big-card">
+            <div class="row">
+              <div id="statusBadge" class="status safe"><i class="fa-solid fa-shield"></i> SAFE</div>
+              <div class="status safe" style="opacity:.9; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                <i class="fa-solid fa-bullseye"></i> Limit:
+                <span id="thLabel">10</span>
+              </div>
+              <div class="status safe" style="opacity:.9; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);">
+                <i class="fa-solid fa-people-group"></i> Group:
+                <span id="clusterThLabel">6</span>
+              </div>
+            </div>
+
+            <div id="count" class="count">0</div>
+            
+            <div style="display:flex; align-items:center; gap:8px;">
+              <div id="prediction" class="msg" style="font-size:1.1rem; color: var(--cyan); margin:0;">Forecast: ~0</div>
+              <select id="predTimeSelect" class="select" style="padding: 2px 6px; width: auto; font-size: 0.75rem; background: rgba(0,212,255,0.1); border-color: var(--cyan); color: var(--cyan); border-radius: 6px;">
+                <option value="1">in 1 Min</option>
+                <option value="5" selected>in 5 Mins</option>
+                <option value="10">in 10 Mins</option>
+                <option value="15">in 15 Mins</option>
+              </select>
+            </div>
+            <div class="msg" style="opacity: 0.7; margin-top: 5px;">Source: <b id="sourceLabel">None</b></div>
+          </div>
+
+          <div class="mini">
+            <div class="label">Max Peak</div>
+            <div class="value" id="statMax">0</div>
+            <div class="hint">Highest today</div>
+          </div>
+          <div class="mini">
+            <div class="label">Avg Density</div>
+            <div class="value" id="statAvg">0</div>
+            <div class="hint">Rolling mean</div>
+          </div>
+          <div class="mini">
+            <div class="label">Trend (P/Min)</div>
+            <div class="value" id="statAcc">0</div>
+            <div class="hint" id="lastSyncHint" style="color: var(--mint);">Waiting for Sync...</div>
+          </div>
+          <div class="mini">
+            <div class="label">Status</div>
+            <div class="value" id="statStatus" style="font-size: 1.5rem;">SAFE</div>
+            <div class="hint">Current state</div>
+          </div>
+          <div class="mini">
+            <div class="label">Clusters</div>
+            <div class="value" id="statClusters">0</div>
+            <div class="hint">Groups found</div>
+          </div>
+          <div class="mini">
+            <div class="label">Largest Group</div>
+            <div class="value" id="statLargest">0</div>
+            <div class="hint">People count</div>
+          </div>
+          <div class="mini">
+            <div class="label">Congestion</div>
+            <div class="value" id="statCong">0%</div>
+            <div class="hint">Area usage</div>
+          </div>
+          <div class="mini">
+            <div class="label">Risk Score</div>
+            <div class="value" id="statRisk">0</div>
+            <div class="hint">Safety index</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" id="chartSection">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-weight:900;color:#dfe2ff;text-transform:uppercase;letter-spacing:1px;">
+            <i class="fa-solid fa-chart-area" style="color:var(--mint)"></i> Trend Analysis
+          </div>
+        </div>
+        <div class="chart-wrap">
+          <canvas id="liveChart"></canvas>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px;">
+          <div style="font-weight:900;color:#dfe2ff;text-transform:uppercase;letter-spacing:1px;">
+            <i class="fa-solid fa-video" style="color:var(--mint)"></i> Live Feed
+          </div>
+          <div class="status safe" style="font-size: 0.7rem;">Active</div>
+        </div>
+        <div id="videoBox" class="video-box">
+          <div class="video-banner">
+            <div><i class="fa-solid fa-circle" style="color:var(--mint); margin-right: 5px;"></i> LIVE</div>
+            <div id="feedRight">Safe • 0 Pax</div>
+          </div>
+          <img id="videoFeed" src="/video_feed" alt="Waiting for stream..." crossorigin="anonymous" />
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // --- PARTICLES INIT ---
+    if(typeof particlesJS !== 'undefined') {
+        particlesJS("particles-js", {
+        "particles": {
+            "number": { "value": 60, "density": { "enable": true, "value_area": 800 } },
+            "color": { "value": "#00ff87" },
+            "shape": { "type": "circle" },
+            "opacity": { "value": 0.2, "random": true },
+            "size": { "value": 3, "random": true },
+            "line_linked": { "enable": true, "distance": 150, "color": "#00d4ff", "opacity": 0.15, "width": 1 },
+            "move": { "enable": true, "speed": 1.5, "direction": "none", "random": false, "out_mode": "out" }
+        },
+        "interactivity": {
+            "detect_on": "canvas",
+            "events": { "onhover": { "enable": true, "mode": "grab" }, "onclick": { "enable": true, "mode": "push" } },
+            "modes": { "grab": { "distance": 140, "line_linked": { "opacity": 0.5 } } }
+        },
+        "retina_detect": true
+        });
+    }
+
+    const SUPABASE_URL = "https://xcslmtmhsrwhqrysjxcz.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhjc2xtdG1oc3J3aHFyeXNqeGN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MTExMTIsImV4cCI6MjA4NTE4NzExMn0.q9aZNvjUsg8wZUXNNSEMQHzhsVxuxaS44tbPYFsSqC8";
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const sections = {
+        home: document.getElementById("pageHome"),
+        auth: document.getElementById("pageAuth"),
+        setup: document.getElementById("pageSetup"),
+        dash: document.getElementById("pageDash")
+    };
+
+    document.getElementById("btnGetStarted").onclick = () => showPage("auth");
+    document.getElementById("btnHomeLogin").onclick = () => showPage("auth");
+    document.getElementById("btnBackHome").onclick = () => showPage("home");
+
+    document.getElementById("btnFS").onclick = () => {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen();
+      else if (document.exitFullscreen) document.exitFullscreen();
+    };
+
+    const tabLogin = document.getElementById("tabLogin");
+    const tabSignup = document.getElementById("tabSignup");
+    const btnAuth = document.getElementById("btnAuth");
+    const authMsg = document.getElementById("authMsg");
+    const authEmail = document.getElementById("authEmail");
+    const authPass = document.getElementById("authPass");
+    const btnLogout1 = document.getElementById("btnLogout1");
+    const btnLogout2 = document.getElementById("btnLogout2");
+    const btnBackSetup = document.getElementById("btnBackSetup");
+    const sourceType = document.getElementById("sourceType");
+    const sourceValue = document.getElementById("sourceValue");
+    const thresholdValue = document.getElementById("thresholdValue");
+    const trainIntervalValue = document.getElementById("trainIntervalValue"); 
+    const btnApply = document.getElementById("btnApply");
+    const setupMsg = document.getElementById("setupMsg");
+    const connDot = document.getElementById("connDot");
+    const connText = document.getElementById("connText");
+    const countEl = document.getElementById("count");
+    const predEl = document.getElementById("prediction");
+    const statusBadge = document.getElementById("statusBadge");
+    const liveCard = document.getElementById("liveCard");
+    const statMax = document.getElementById("statMax");
+    const statAvg = document.getElementById("statAvg");
+    const statAcc = document.getElementById("statAcc");
+    const statStatus = document.getElementById("statStatus");
+    const statClusters = document.getElementById("statClusters");
+    const statLargest = document.getElementById("statLargest");
+    const statCong = document.getElementById("statCong");
+    const statRisk = document.getElementById("statRisk");
+    const feedRight = document.getElementById("feedRight");
+    const thLabel = document.getElementById("thLabel");
+    const clusterThLabel = document.getElementById("clusterThLabel");
+    const sourceLabel = document.getElementById("sourceLabel");
+    const btnHeatmap = document.getElementById("btnHeatmap");
+
+    let authMode = "login";
+    let socket = null;
+    let alertActive = false;
+    let heatmapEnabled = false;
+    let stats = { max:0, sum:0, n:0 };
+    let trainIntervalId = null; 
+
+    function showPage(name){
+      Object.values(sections).forEach(el => el.classList.add("hidden"));
+      sections[name].classList.remove("hidden");
+      window.scrollTo(0,0);
+    }
+
+    function setConn(connected){
+      if(connected){ connDot.classList.add("connected"); connText.innerText = "Online"; } 
+      else { connDot.classList.remove("connected"); connText.innerText = "Offline"; }
+    }
+
+    tabLogin.onclick = ()=>{ authMode = "login"; tabLogin.classList.remove("secondary"); tabSignup.classList.add("secondary"); btnAuth.innerText = "Secure Login"; authMsg.innerText = ""; };
+    tabSignup.onclick = ()=>{ authMode = "signup"; tabSignup.classList.remove("secondary"); tabLogin.classList.add("secondary"); btnAuth.innerText = "Create Account"; authMsg.innerText = ""; };
+
+    async function api(path, method="GET", body=null){
+      const { data } = await sb.auth.getSession();
+      const headers = { "Content-Type":"application/json" };
+      if(data?.session) headers.Authorization = "Bearer " + data.session.access_token;
+      const res = await fetch("http://127.0.0.1:8000" + path, { method, headers, body: body?JSON.stringify(body):null });
+      if(!res.ok) throw new Error("API Error");
+      return await res.json();
+    }
+
+    btnAuth.onclick = async ()=>{
+      authMsg.className="msg"; authMsg.innerText="Verifying credentials...";
+      const email = authEmail.value.trim(); const password = authPass.value.trim();
+      if(!email || !password) { authMsg.className="msg error"; authMsg.innerText="Missing fields."; return; }
+      let res;
+      if(authMode === "signup") res = await sb.auth.signUp({ email, password });
+      else res = await sb.auth.signInWithPassword({ email, password });
+      if(res.error){ authMsg.className="msg error"; authMsg.innerText = res.error.message; } 
+      else if(authMode === "signup"){ authMsg.className="msg success"; authMsg.innerText = "Account created! Login now."; tabLogin.click(); } 
+      else { authMsg.className="msg success"; authMsg.innerText = "Access Granted."; showPage("setup"); loadConfig(); }
+    };
+
+    async function logout(){ try { await sb.auth.signOut(); } catch(e){} disconnectSocket(); showPage("home"); }
+    btnLogout1.onclick = logout; btnLogout2.onclick = logout;
+
+    async function loadConfig(){
+      try{
+        const cfg = await api("/config");
+        if(cfg.threshold) thresholdValue.value = cfg.threshold;
+        if(cfg.cluster_threshold) clusterThLabel.innerText = cfg.cluster_threshold;
+        if(typeof cfg.heatmap === "boolean") { heatmapEnabled=cfg.heatmap; updateHeatmapBtn(); }
+      }catch(e){}
+    }
+
+    btnApply.onclick = async ()=>{
+      setupMsg.className="msg"; setupMsg.innerText="Initializing system...";
+      const type = sourceType.value; const value = sourceValue.value.trim();
+      const threshold = parseInt(thresholdValue.value || "10");
+      const intervalMs = parseInt(trainIntervalValue.value || "120000"); 
+
+      if(!value) { setupMsg.className="msg error"; setupMsg.innerText="Enter source value."; return; }
+      try{
+        const thRes = await api("/set_threshold","POST",{ threshold });
+        await api("/set_source","POST",{ type, value });
+        thLabel.innerText = threshold; sourceLabel.innerText = type.toUpperCase();
+        if(thRes.cluster_threshold) clusterThLabel.innerText = thRes.cluster_threshold;
+        stats = { max:0, sum:0, n:0 };
+        document.getElementById("videoFeed").src = "/video_feed?ts=" + Date.now();
+        
+        showPage("dash"); 
+        connectSocket();
+
+        if(trainIntervalId) clearInterval(trainIntervalId); 
+        
+        trainIntervalId = setInterval(() => {
+            if(socket && socket.connected) {
+                api("/train_model", "POST", {}).then(res => {
+                    console.log(`System Auto-Trained (${intervalMs/1000}s) with Trend:`, res.trend_per_min);
+                    document.getElementById("lastSyncHint").innerText = "Last Sync: " + new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+                }).catch(e => {
+                    console.log("Auto-train failed");
+                });
+            }
+        }, intervalMs);
+
+      }catch(e){ setupMsg.className="msg error"; setupMsg.innerText = "Connection failed."; }
+    };
+    
+    btnBackSetup.onclick = ()=>{ 
+        disconnectSocket(); 
+        if(trainIntervalId) clearInterval(trainIntervalId); 
+        showPage("setup"); 
+    };
+
+    function updateHeatmapBtn(){
+       btnHeatmap.innerHTML = heatmapEnabled ? `<i class="fa-solid fa-fire" style="color:var(--warn)"></i> Heatmap: ON` : `<i class="fa-solid fa-fire"></i> Heatmap: OFF`;
+       btnHeatmap.classList.toggle("secondary", !heatmapEnabled);
+    }
+    btnHeatmap.onclick = async ()=>{
+       heatmapEnabled = !heatmapEnabled; updateHeatmapBtn();
+       await api("/set_heatmap", "POST", { enabled: heatmapEnabled });
+       document.getElementById("videoFeed").src = "/video_feed?ts=" + Date.now();
+    };
+
+    const ctx = document.getElementById("liveChart").getContext("2d");
+    const gradient = ctx.createLinearGradient(0,0,0,300);
+    gradient.addColorStop(0, 'rgba(0, 255, 135, 0.2)');
+    gradient.addColorStop(1, 'rgba(0, 255, 135, 0.0)');
+
+    const liveChart = new Chart(ctx, {
+      type:"line",
+      data:{
+        labels:[],
+        datasets:[
+          { label:"Live Count", data:[], borderColor:"#00ff87", backgroundColor:gradient, fill:true, tension:0, pointRadius:4, borderWidth:3 },
+          { label:"Predicted Count", data:[], borderColor:"#00d4ff", borderDash:[5,5], fill:false, tension:0, pointRadius:5, borderWidth:2 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        scales:{ 
+            y:{ beginAtZero:true, min:0, grid:{ color:"rgba(255,255,255,0.05)" }, ticks:{ color:"#a0a0d0" } }, 
+            x:{ display: true, grid: { display: false }, ticks: { color: "#a0a0d0", maxRotation: 45, minRotation: 0 } }
+        },
+        plugins:{ legend:{ display: true, position: 'top', align: 'end', labels: { color: '#a0a0d0', boxWidth: 12, font: { family: "'Poppins', sans-serif", size: 11 } } } },
+        animation: { duration: 0 } 
+      }
+    });
+
+    function connectSocket(){
+      socket = io("http://127.0.0.1:8000", { path: "/ws" });
+      socket.on("connect", ()=>setConn(true));
+      socket.on("disconnect", ()=>setConn(false));
+      
+      socket.on("broadcast_data", (data)=>{
+        const count = data.count || 0;
+        const trend = data.trend_per_min || 0; 
+        const status = data.alert_status || "SAFE";
+        
+        countEl.innerText = count;
+
+        const futureMins = parseInt(document.getElementById("predTimeSelect").value);
+        let futurePred = Math.round(count + (trend * futureMins));
+        if (futurePred < 0) futurePred = 0;
+
+        predEl.innerText = `Forecast: ~${futurePred}`;
+        
+        stats.max = Math.max(stats.max, count);
+        stats.sum += count; stats.n++;
+        statMax.innerText = stats.max;
+        statAvg.innerText = Math.round(stats.sum/stats.n);
+        
+        statAcc.innerText = trend > 0 ? `+${trend.toFixed(1)}` : trend.toFixed(1); 
+
+        statStatus.innerText = status;
+        statClusters.innerText = data.cluster_count || 0;
+        statLargest.innerText = data.largest_cluster || 0;
+        statRisk.innerText = data.risk_score || 0;
+        statCong.innerText = Math.round((data.congestion_score||0)*100) + "%";
+
+        feedRight.innerText = `${status} • ${count} Pax`;
+
+        const th = parseInt(thresholdValue.value);
+        
+        // 🔇 SOUND REMOVED FROM HERE
+        if(status === "DANGER"){
+           statusBadge.className = "status danger"; statusBadge.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> CRITICAL`;
+           liveCard.classList.add("blink");
+           if(!alertActive){ 
+               alertActive=true; 
+           }
+        } else if (count > th/2){
+           statusBadge.className = "status mod"; statusBadge.innerHTML = `<i class="fa-solid fa-circle-exclamation"></i> WARNING`;
+           liveCard.classList.remove("blink"); alertActive=false;
+        } else {
+           statusBadge.className = "status safe"; statusBadge.innerHTML = `<i class="fa-solid fa-shield"></i> SAFE`;
+           liveCard.classList.remove("blink"); alertActive=false;
+        }
+
+        const t = new Date().toLocaleTimeString();
+        if(liveChart.data.labels.length > 30){ liveChart.data.labels.shift(); liveChart.data.datasets.forEach(ds=>ds.data.shift()); }
+        liveChart.data.labels.push(t);
+        liveChart.data.datasets[0].data.push(count);
+        liveChart.data.datasets[1].data.push(futurePred); 
+        liveChart.update();
+        
+        if(typeof data.heatmap_enabled==="boolean" && data.heatmap_enabled !== heatmapEnabled){
+             heatmapEnabled=data.heatmap_enabled; updateHeatmapBtn();
+        }
+      });
+    }
+
+    function disconnectSocket(){ if(socket){ socket.disconnect(); socket=null; } }
+
+    (async()=>{
+      const { data } = await sb.auth.getSession();
+      if(data?.session){ showPage("setup"); loadConfig(); }
+      else showPage("home");
+    })();
+
+  </script>
+</body>
+</html>
