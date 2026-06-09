@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AuraView — Crowd Intelligence Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"/>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{font-size:16px;scroll-behavior:smooth}
+:root{
+  --bg:#F9F8F5;
+  --white:#FFFFFF;
+  --stone:#F1EFE9;
+  --stone2:#E3DFD7;
+  --ink:#18150F;
+  --ink2:#2C2820;
+  --ink3:#6B6659;
+  --ink4:#A09A90;
+  --ink5:#C8C3BB;
+  --indigo:#4338CA;
+  --indigo-h:#3730A3;
+  --indigo-dim:rgba(67,56,202,.10);
+  --indigo-glow:rgba(67,56,202,.22);
+  --green:#16A34A;
+  --green-dim:#DCFCE7;
+  --amber:#B45309;
+  --amber-dim:#FEF3C7;
+  --red:#B91C1C;
+  --red-dim:#FEE2E2;
+  --red-glow:rgba(185,28,28,.18);
+  --sans:'Plus Jakarta Sans',system-ui,sans-serif;
+  --serif:'Instrument Serif',Georgia,serif;
+  --r:14px;--r-sm:9px;--r-lg:20px;--r-xl:28px;
+  --sh-xs:0 1px 3px rgba(0,0,0,.05),0 1px 2px rgba(0,0,0,.04);
+  --sh-sm:0 3px 10px rgba(0,0,0,.07),0 1px 4px rgba(0,0,0,.04);
+  --sh-md:0 8px 24px rgba(0,0,0,.09),0 3px 8px rgba(0,0,0,.05);
+  --sh-lg:0 20px 56px rgba(0,0,0,.13),0 6px 16px rgba(0,0,0,.07);
+  --sh-xl:0 32px 80px rgba(0,0,0,.17),0 10px 24px rgba(0,0,0,.08);
+}
+body{font-family:var(--sans);background:var(--bg);color:var(--ink);min-height:100vh;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:var(--stone)}
+::-webkit-scrollbar-thumb{background:var(--stone2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--indigo)}
+::selection{background:var(--indigo);color:#fff}
+.hidden{display:none!important}
+
+/* ── ANIMATIONS ── */
+@keyframes rise{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@keyframes popin{from{opacity:0;transform:scale(0.94)}to{opacity:1;transform:scale(1)}}
+@keyframes slidein{from{transform:translateY(-100%);opacity:0}to{transform:translateY(0);opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.35}}
+@keyframes ripple{0%{transform:scale(1);opacity:.9}100%{transform:scale(2.6);opacity:0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+@keyframes modal-bg-in{from{opacity:0}to{opacity:1}}
+@keyframes modal-slide{from{opacity:0;transform:translateY(28px) scale(.97)}to{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes notif-in{from{opacity:0;transform:translateX(110%)}to{opacity:1;transform:translateX(0)}}
+@keyframes notif-out{from{opacity:1;transform:translateX(0)}to{opacity:0;transform:translateX(110%)}}
+@keyframes scanline{0%{top:-2px}100%{top:102%}}
+@keyframes count-pop{0%{transform:scale(1)}40%{transform:scale(1.1)}100%{transform:scale(1)}}
+
+.rise{opacity:0;animation:rise .54s cubic-bezier(.16,1,.3,1) forwards}
+.d1{animation-delay:.07s}.d2{animation-delay:.14s}.d3{animation-delay:.21s}
+.d4{animation-delay:.28s}.d5{animation-delay:.35s}.d6{animation-delay:.42s}
+
+/* ── NAV ── */
+.nav{
+  position:sticky;top:0;z-index:100;height:62px;padding:0 28px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;
+  background:rgba(249,248,245,.92);backdrop-filter:blur(20px);
+  border-bottom:1px solid var(--stone2);
+}
+.logo{display:flex;align-items:center;gap:9px;font-size:1.05rem;font-weight:800;color:var(--ink);letter-spacing:-.01em;text-decoration:none;cursor:pointer}
+.logo-mark{width:28px;height:28px;background:var(--indigo);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+.logo-mark::after{content:'';width:9px;height:9px;background:#fff;border-radius:50%;position:absolute}
+.nav-r{display:flex;align-items:center;gap:8px}
+
+/* ── BUTTONS ── */
+.btn{display:inline-flex;align-items:center;gap:7px;font-family:var(--sans);font-weight:600;
+  font-size:.84rem;border:none;border-radius:var(--r-sm);padding:9px 18px;cursor:pointer;
+  transition:all .17s ease;white-space:nowrap;line-height:1}
+.btn-indigo{background:var(--indigo);color:#fff}
+.btn-indigo:hover{background:var(--indigo-h);transform:translateY(-1px);box-shadow:0 5px 18px var(--indigo-glow)}
+.btn-dark{background:var(--ink);color:#fff}
+.btn-dark:hover{background:var(--ink2);transform:translateY(-1px)}
+.btn-outline{background:transparent;color:var(--ink3);border:1.5px solid var(--stone2)}
+.btn-outline:hover{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-dim)}
+.btn-ghost{background:transparent;color:var(--ink3)}
+.btn-ghost:hover{background:var(--stone);color:var(--ink)}
+.btn-redsft{background:var(--red-dim);color:var(--red);border:1.5px solid rgba(185,28,28,.18)}
+.btn-redsft:hover{background:rgba(185,28,28,.2)}
+.btn:disabled{opacity:.38;cursor:not-allowed;pointer-events:none}
+.btn-sm{padding:7px 13px;font-size:.77rem}
+.btn-icon{padding:8px;aspect-ratio:1;border-radius:var(--r-sm)}
+.btn-lg{padding:13px 28px;font-size:.92rem}
+
+/* ── FORMS ── */
+.field{display:flex;flex-direction:column;gap:5px;margin-bottom:14px}
+.lbl{font-size:.71rem;font-weight:700;color:var(--ink3);letter-spacing:.04em;text-transform:uppercase}
+.inp,.sel{font-family:var(--sans);font-size:.88rem;font-weight:500;
+  background:var(--white);border:1.5px solid var(--stone2);border-radius:var(--r-sm);
+  padding:10px 13px;color:var(--ink);outline:none;width:100%;transition:border-color .14s,box-shadow .14s}
+.inp:focus,.sel:focus{border-color:var(--indigo);box-shadow:0 0 0 3px var(--indigo-dim)}
+.inp::placeholder{color:var(--ink5)}
+.sel option{background:#fff}
+.fnote{font-size:.71rem;color:var(--ink4);line-height:1.5;margin-top:3px}
+.fmsg{font-size:.78rem;font-weight:600;min-height:16px;color:var(--ink4)}
+.fmsg.err{color:var(--red)}.fmsg.ok{color:var(--green)}
+
+/* ════════════════════════════
+   HOME — full scrollable landing
+════════════════════════════ */
+#pageHome{background:var(--bg)}
+
+/* Hero */
+.hero{
+  min-height:calc(100vh - 62px);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:72px 22px 60px;position:relative;overflow:hidden;
+}
+/* subtle grid background */
+.hero::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(67,56,202,.04) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(67,56,202,.04) 1px,transparent 1px);
+  background-size:48px 48px;
+  mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,black 30%,transparent 80%);
+  pointer-events:none;
+}
+.hero-chip{display:inline-flex;align-items:center;gap:7px;
+  background:var(--indigo-dim);color:var(--indigo);font-size:.72rem;font-weight:700;
+  letter-spacing:.08em;padding:5px 14px;border-radius:999px;margin-bottom:28px;
+  border:1px solid rgba(67,56,202,.2)}
+.hero-chip .pulse{width:7px;height:7px;border-radius:50%;background:var(--green);position:relative}
+.hero-chip .pulse::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid var(--green);animation:breathe 1.8s ease-in-out infinite}
+.hero-h1{font-family:var(--serif);font-size:clamp(2.6rem,6vw,5rem);line-height:1.07;
+  color:var(--ink);max-width:660px;margin-bottom:20px}
+.hero-h1 em{font-style:italic;color:var(--indigo)}
+.hero-p{font-size:1rem;color:var(--ink3);max-width:460px;line-height:1.75;margin-bottom:38px}
+.hero-cta{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+
+/* Mock dashboard preview */
+.hero-preview{
+  margin-top:52px;max-width:780px;width:100%;
+  background:var(--white);border:1px solid var(--stone2);
+  border-radius:var(--r-xl);box-shadow:var(--sh-lg);
+  overflow:hidden;animation:float 5s ease-in-out infinite;
+}
+.hp-topbar{
+  background:var(--ink);padding:12px 18px;
+  display:flex;align-items:center;gap:10px;
+}
+.hp-dots{display:flex;gap:6px}
+.hp-dot{width:10px;height:10px;border-radius:50%}
+.hp-title{font-size:.7rem;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.1em;text-transform:uppercase;margin-left:auto;margin-right:auto}
+.hp-body{padding:18px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.hp-cam{background:var(--stone);border-radius:var(--r-sm);overflow:hidden;aspect-ratio:16/9;position:relative}
+.hp-cam-fill{position:absolute;inset:0;display:flex;align-items:flex-end;justify-content:space-between;padding:8px;
+  background:linear-gradient(to top,rgba(0,0,0,.6) 0%,transparent 60%)}
+.hp-cam-count{font-size:1.3rem;font-weight:800;color:#fff}
+.hp-cam-status{font-size:.55rem;font-weight:700;padding:3px 7px;border-radius:4px;text-transform:uppercase}
+.hp-cam1{background:linear-gradient(135deg,#0a0a1a,#1a1a3a)}
+.hp-cam2{background:linear-gradient(135deg,#0a1a0a,#1a2a1a)}
+.hp-cam3{background:linear-gradient(135deg,#1a0a0a,#2a1a1a)}
+/* scanline on preview cams */
+.hp-cam::after{content:'';position:absolute;left:0;right:0;height:1px;
+  background:rgba(67,56,202,.5);animation:scanline 3s linear infinite}
+.hp-cam:nth-child(2)::after{animation-delay:-1s}
+.hp-cam:nth-child(3)::after{animation-delay:-2s}
+
+/* Stats bar below preview */
+.hp-stats{
+  padding:14px 18px;border-top:1px solid var(--stone2);
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+}
+.hp-stat{padding:10px 14px;border-right:1px solid var(--stone2);text-align:center}
+.hp-stat:last-child{border-right:none}
+.hp-stat-val{font-size:1.3rem;font-weight:800;color:var(--ink);line-height:1}
+.hp-stat-val.c-i{color:var(--indigo)}.hp-stat-val.c-g{color:var(--green)}.hp-stat-val.c-r{color:var(--red)}.hp-stat-val.c-a{color:var(--amber)}
+.hp-stat-lbl{font-size:.62rem;color:var(--ink4);font-weight:600;margin-top:3px;text-transform:uppercase;letter-spacing:.05em}
+
+/* ── HOW IT WORKS ── */
+.section{padding:80px 22px;max-width:1100px;margin:0 auto}
+.section-eyebrow{font-family:var(--sans);font-size:.7rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--indigo);margin-bottom:12px}
+.section-h{font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.8rem);color:var(--ink);max-width:600px;line-height:1.15;margin-bottom:16px}
+.section-p{font-size:.95rem;color:var(--ink3);max-width:540px;line-height:1.72;margin-bottom:0}
+
+.steps-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--stone2);border:1px solid var(--stone2);border-radius:var(--r-lg);overflow:hidden;margin-top:44px}
+@media(max-width:700px){.steps-grid{grid-template-columns:1fr}}
+.step{background:var(--white);padding:32px 28px;position:relative;transition:background .2s}
+.step:hover{background:var(--stone)}
+.step-num{font-family:var(--serif);font-size:3.5rem;color:var(--stone2);line-height:1;margin-bottom:14px;font-style:italic}
+.step-icon{width:44px;height:44px;border-radius:11px;background:var(--indigo-dim);border:1px solid rgba(67,56,202,.18);
+  display:flex;align-items:center;justify-content:center;color:var(--indigo);font-size:1.1rem;margin-bottom:16px}
+.step-title{font-size:.95rem;font-weight:700;margin-bottom:8px;color:var(--ink)}
+.step-desc{font-size:.8rem;color:var(--ink3);line-height:1.65}
+
+/* ── FEATURES DEEP DIVE ── */
+.features-section{background:var(--ink);padding:80px 22px;overflow:hidden}
+.features-inner{max-width:1100px;margin:0 auto}
+.features-eyebrow{font-size:.7rem;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:rgba(255,255,255,.35);margin-bottom:12px}
+.features-h{font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.8rem);color:#fff;max-width:520px;line-height:1.15;margin-bottom:48px}
+.features-h em{font-style:italic;color:rgba(255,255,255,.5)}
+.feat-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+@media(max-width:700px){.feat-grid{grid-template-columns:1fr}}
+.feat-card{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r);padding:26px;transition:background .2s,border-color .2s}
+.feat-card:hover{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14)}
+.feat-card-icon{width:42px;height:42px;border-radius:10px;background:rgba(67,56,202,.3);
+  display:flex;align-items:center;justify-content:center;color:#a5b4fc;font-size:1rem;margin-bottom:16px}
+.feat-card-title{font-size:.92rem;font-weight:700;color:#fff;margin-bottom:8px}
+.feat-card-desc{font-size:.8rem;color:rgba(255,255,255,.45);line-height:1.65}
+.feat-card-tag{display:inline-flex;align-items:center;gap:5px;margin-top:12px;
+  font-size:.67rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  color:rgba(67,56,202,.9);background:rgba(67,56,202,.15);border:1px solid rgba(67,56,202,.2);
+  padding:4px 9px;border-radius:999px}
+
+/* ── ALERT TYPES SECTION ── */
+.alerts-section{padding:80px 22px;background:var(--white);overflow:hidden}
+.alerts-inner{max-width:1100px;margin:0 auto}
+.alert-types-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:40px}
+@media(max-width:700px){.alert-types-grid{grid-template-columns:1fr}}
+.alert-type-card{border-radius:var(--r);padding:24px;border:1px solid}
+.at-safe{background:var(--green-dim);border-color:rgba(22,163,74,.2)}
+.at-warn{background:var(--amber-dim);border-color:rgba(180,83,9,.2)}
+.at-danger{background:var(--red-dim);border-color:rgba(185,28,28,.2)}
+.at-icon{width:44px;height:44px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.1rem;margin-bottom:16px}
+.at-safe .at-icon{background:rgba(22,163,74,.15);color:var(--green)}
+.at-warn .at-icon{background:rgba(180,83,9,.15);color:var(--amber)}
+.at-danger .at-icon{background:rgba(185,28,28,.15);color:var(--red)}
+.at-title{font-size:.95rem;font-weight:800;margin-bottom:6px}
+.at-safe .at-title{color:var(--green)}.at-warn .at-title{color:var(--amber)}.at-danger .at-title{color:var(--red)}
+.at-desc{font-size:.8rem;line-height:1.65;color:var(--ink3)}
+.at-trigger{font-size:.72rem;font-weight:700;margin-top:12px;color:var(--ink4)}
+
+/* ── STATS TICKER ── */
+.stats-ticker{
+  background:var(--indigo);padding:18px 22px;
+  display:flex;align-items:center;justify-content:center;flex-wrap:wrap;gap:0;
+  border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);
+}
+.ticker-stat{
+  padding:8px 36px;border-right:1px solid rgba(255,255,255,.2);
+  text-align:center;
+}
+.ticker-stat:last-child{border-right:none}
+.ticker-stat-val{font-family:var(--serif);font-size:2rem;color:#fff;line-height:1;font-style:italic}
+.ticker-stat-lbl{font-size:.68rem;font-weight:700;color:rgba(255,255,255,.5);letter-spacing:.1em;text-transform:uppercase;margin-top:3px}
+
+/* ── TESTIMONIAL / USE-CASE SECTION ── */
+.usecases-section{padding:80px 22px;max-width:1100px;margin:0 auto}
+.usecases-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:40px}
+@media(max-width:700px){.usecases-grid{grid-template-columns:1fr}}
+.usecase-card{
+  background:var(--white);border:1px solid var(--stone2);border-radius:var(--r);
+  padding:24px;box-shadow:var(--sh-xs);transition:transform .2s,box-shadow .2s;
+}
+.usecase-card:hover{transform:translateY(-3px);box-shadow:var(--sh-sm)}
+.uc-emoji{font-size:2rem;margin-bottom:14px;display:block}
+.uc-title{font-size:.92rem;font-weight:700;margin-bottom:8px}
+.uc-desc{font-size:.79rem;color:var(--ink3);line-height:1.65}
+
+/* ── CTA SECTION ── */
+.cta-section{
+  margin:0 22px 80px;max-width:1056px;margin-left:auto;margin-right:auto;
+  background:linear-gradient(135deg,var(--indigo) 0%,var(--indigo-h) 100%);
+  border-radius:var(--r-xl);padding:60px 48px;
+  text-align:center;position:relative;overflow:hidden;
+}
+.cta-section::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(circle at 20% 50%,rgba(255,255,255,.08) 0%,transparent 60%),
+    radial-gradient(circle at 80% 50%,rgba(255,255,255,.06) 0%,transparent 60%);
+  pointer-events:none;
+}
+.cta-h{font-family:var(--serif);font-size:clamp(1.8rem,4vw,2.6rem);color:#fff;margin-bottom:14px;line-height:1.15}
+.cta-h em{font-style:italic;color:rgba(255,255,255,.65)}
+.cta-p{font-size:.95rem;color:rgba(255,255,255,.65);max-width:420px;margin:0 auto 32px;line-height:1.7}
+.cta-btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.btn-white{background:#fff;color:var(--indigo);font-weight:700}
+.btn-white:hover{background:rgba(255,255,255,.92);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,0,0,.2)}
+.btn-white-outline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.35)}
+.btn-white-outline:hover{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.6)}
+
+/* ── FOOTER ── */
+.footer{
+  background:var(--ink);padding:44px 28px 28px;
+  display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:32px;
+}
+@media(max-width:700px){.footer{grid-template-columns:1fr 1fr}}
+.footer-brand{}
+.footer-logo{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+.footer-logo .logo-mark{width:26px;height:26px;background:var(--indigo);border-radius:7px;display:flex;align-items:center;justify-content:center;position:relative;flex-shrink:0}
+.footer-logo .logo-mark::after{content:'';width:8px;height:8px;background:#fff;border-radius:50%;position:absolute}
+.footer-logo-name{font-size:.95rem;font-weight:800;color:#fff}
+.footer-tagline{font-size:.78rem;color:rgba(255,255,255,.35);line-height:1.6;max-width:220px}
+.footer-col-title{font-size:.68rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.3);margin-bottom:14px}
+.footer-links{display:flex;flex-direction:column;gap:9px}
+.footer-link{font-size:.8rem;color:rgba(255,255,255,.5);text-decoration:none;transition:color .15s;cursor:pointer}
+.footer-link:hover{color:rgba(255,255,255,.9)}
+.footer-bottom{
+  background:var(--ink);border-top:1px solid rgba(255,255,255,.07);
+  padding:18px 28px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;
+}
+.footer-copy{font-size:.74rem;color:rgba(255,255,255,.25)}
+.footer-badges{display:flex;gap:8px}
+.footer-badge{font-size:.65rem;font-weight:700;padding:4px 9px;border-radius:4px;
+  background:rgba(255,255,255,.07);color:rgba(255,255,255,.35);border:1px solid rgba(255,255,255,.08)}
+
+/* ═══════════════════════════
+   AUTH
+═══════════════════════════ */
+.auth-wrap{display:flex;align-items:center;justify-content:center;min-height:calc(100vh - 62px);padding:38px 18px}
+.auth-box{width:100%;max-width:380px;background:var(--white);border-radius:var(--r-xl);
+  border:1px solid var(--stone2);box-shadow:var(--sh-lg);padding:36px}
+.auth-h{font-family:var(--serif);font-size:1.7rem;color:var(--ink);margin-bottom:4px}
+.auth-sub{font-size:.82rem;color:var(--ink3);margin-bottom:24px;line-height:1.5}
+.tabs{display:flex;background:var(--stone);border-radius:var(--r-sm);padding:4px;gap:3px;margin-bottom:20px}
+.tab{flex:1;text-align:center;padding:8px;border-radius:7px;font-size:.79rem;font-weight:700;
+  cursor:pointer;color:var(--ink3);transition:all .15s}
+.tab.on{background:var(--white);color:var(--ink);box-shadow:var(--sh-xs)}
+
+/* ═══════════════════════════
+   SETUP
+═══════════════════════════ */
+.setup-wrap{max-width:800px;margin:0 auto;padding:42px 20px}
+.setup-h{font-family:var(--serif);font-size:1.85rem;color:var(--ink);margin-bottom:5px}
+.setup-sub{font-size:.87rem;color:var(--ink3);margin-bottom:30px;line-height:1.55}
+.setup-cols{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:660px){.setup-cols{grid-template-columns:1fr}}
+.scard{background:var(--white);border:1px solid var(--stone2);border-radius:var(--r);padding:20px;box-shadow:var(--sh-xs)}
+.scard-t{font-size:.66rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);
+  margin-bottom:14px;display:flex;align-items:center;gap:7px}
+.scard-t::after{content:'';flex:1;height:1px;background:var(--stone2)}
+.cam-row{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r-sm);
+  background:var(--stone);border:1.5px solid transparent;margin-bottom:6px;transition:border-color .14s}
+.cam-row:hover{border-color:var(--indigo)}
+.cam-row-icon{width:32px;height:32px;border-radius:8px;background:var(--indigo-dim);color:var(--indigo);
+  display:flex;align-items:center;justify-content:center;font-size:.82rem;flex-shrink:0}
+.cam-row-info{flex:1;min-width:0}
+.cam-row-name{font-size:.82rem;font-weight:700;color:var(--ink)}
+.cam-row-src{font-size:.69rem;color:var(--ink4);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:1px}
+.cam-row-del{width:27px;height:27px;border:none;background:transparent;cursor:pointer;
+  color:var(--ink4);border-radius:6px;display:flex;align-items:center;justify-content:center;
+  font-size:.77rem;transition:all .13s}
+.cam-row-del:hover{background:var(--red-dim);color:var(--red)}
+.add-btn{width:100%;padding:10px;border-radius:var(--r-sm);border:1.5px dashed var(--stone2);
+  background:transparent;font-family:var(--sans);font-size:.79rem;font-weight:600;color:var(--ink4);
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px;transition:all .15s;margin-top:9px}
+.add-btn:hover{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-dim)}
+
+/* ═══════════════════════════
+   DASHBOARD
+═══════════════════════════ */
+#pageDash{min-height:calc(100vh - 62px);background:var(--bg)}
+
+/* Alert bar */
+.alert-bar{display:flex;align-items:center;gap:14px;padding:13px 26px;
+  background:var(--red);color:#fff;font-weight:600;font-size:.86rem;
+  animation:slidein .3s cubic-bezier(.16,1,.3,1)}
+.alert-bar.gone{display:none}
+.alert-bar-icon{width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,.2);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.alert-bar-msgs{flex:1;display:flex;flex-wrap:wrap;gap:4px 18px}
+.alert-bar-msg{display:flex;align-items:center;gap:5px}
+.alert-bar-x{background:rgba(255,255,255,.22);border:none;color:#fff;width:26px;height:26px;
+  border-radius:6px;cursor:pointer;font-size:.77rem;display:flex;align-items:center;
+  justify-content:center;flex-shrink:0;transition:background .13s}
+.alert-bar-x:hover{background:rgba(255,255,255,.38)}
+
+/* ── NOTIFICATION TOASTS (removed — replaced by alert drawer) ── */
+
+/* Dash body */
+.dbody{padding:20px 24px;display:flex;flex-direction:column;gap:16px}
+
+/* Summary strip */
+.summary-row{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+@media(max-width:860px){.summary-row{grid-template-columns:repeat(2,1fr)}}
+.sv{background:var(--white);border:1px solid var(--stone2);border-radius:var(--r);
+  padding:16px 18px;box-shadow:var(--sh-xs);transition:transform .18s,box-shadow .18s}
+.sv:hover{transform:translateY(-2px);box-shadow:var(--sh-sm)}
+.sv-lbl{font-size:.68rem;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
+.sv-val{font-size:2.1rem;font-weight:800;line-height:1;letter-spacing:-.03em;color:var(--ink)}
+.sv-val.c-i{color:var(--indigo)}.sv-val.c-a{color:var(--amber)}.sv-val.c-r{color:var(--red)}.sv-val.c-g{color:var(--green)}
+.sv-note{font-size:.71rem;color:var(--ink4);margin-top:5px}
+.spill{display:inline-flex;align-items:center;gap:6px;font-size:.75rem;font-weight:700;padding:5px 11px;border-radius:999px;margin-top:5px}
+.sp-ok{background:var(--green-dim);color:var(--green)}
+.sp-wn{background:var(--amber-dim);color:var(--amber)}
+.sp-dn{background:var(--red-dim);color:var(--red)}
+.sdot{width:7px;height:7px;border-radius:50%;background:currentColor;position:relative;flex-shrink:0}
+.sdot::after{content:'';position:absolute;inset:-3px;border-radius:50%;border:1.5px solid currentColor;animation:breathe 2s ease-in-out infinite}
+.sp-dn .sdot::after{animation:ripple 1s ease-out infinite}
+
+/* Section header */
+.sec-hdr{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.sec-title{font-size:.71rem;font-weight:800;letter-spacing:.09em;text-transform:uppercase;color:var(--ink4);display:flex;align-items:center;gap:6px}
+.sec-hint{font-size:.72rem;color:var(--ink4);font-weight:500;letter-spacing:0;text-transform:none;margin-left:6px}
+
+/* Camera grid */
+.cams-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+
+/* Camera card */
+.cam-card{
+  background:var(--white);border:1.5px solid var(--stone2);border-radius:var(--r);
+  box-shadow:var(--sh-xs);overflow:hidden;cursor:pointer;
+  transition:transform .2s,box-shadow .2s,border-color .2s;position:relative;
+}
+.cam-card:hover{transform:translateY(-3px);box-shadow:var(--sh-md);border-color:rgba(67,56,202,.35)}
+.cam-card.crit{border-color:rgba(185,28,28,.5);box-shadow:0 0 0 3px var(--red-glow),var(--sh-sm)}
+.cam-card.warn{border-color:rgba(180,83,9,.35)}
+.cam-click-hint{
+  position:absolute;inset:0;z-index:5;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(67,56,202,.07);opacity:0;transition:opacity .2s;pointer-events:none;
+}
+.cam-click-hint span{
+  background:var(--indigo);color:#fff;font-size:.72rem;font-weight:700;
+  padding:7px 14px;border-radius:999px;letter-spacing:.05em;box-shadow:0 4px 16px var(--indigo-glow);
+}
+.cam-card:hover .cam-click-hint{opacity:1}
+
+/* Feed */
+.cfeed{position:relative;aspect-ratio:16/9;background:#0A0A0A;overflow:hidden;flex-shrink:0}
+.cfeed img{width:100%;height:100%;object-fit:cover;display:block}
+.cfeed-ph{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9px;color:rgba(255,255,255,.18)}
+.cfeed-ph i{font-size:2rem}
+.cfeed-ph span{font-size:.65rem;letter-spacing:.15em;text-transform:uppercase}
+.fov{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:space-between;padding:10px;pointer-events:none}
+.fov-top{display:flex;justify-content:space-between;align-items:flex-start}
+.fov-bot{display:flex;justify-content:space-between;align-items:flex-end}
+.fbadge{font-size:.6rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:5px;backdrop-filter:blur(8px)}
+.fb-live{background:rgba(185,28,28,.85);color:#fff}
+.fb-safe{background:rgba(22,163,74,.82);color:#fff}
+.fb-warn{background:rgba(180,83,9,.88);color:#fff}
+.fb-crit{background:rgba(185,28,28,.92);color:#fff}
+.fb-dark{background:rgba(0,0,0,.56);color:rgba(255,255,255,.8)}
+.fcount{font-size:2.5rem;font-weight:800;color:#fff;line-height:1;text-shadow:0 2px 14px rgba(0,0,0,.75);letter-spacing:-.03em}
+.fcount small{display:block;font-size:.57rem;font-weight:600;color:rgba(255,255,255,.5);letter-spacing:.13em;text-transform:uppercase;margin-top:1px}
+.fmini{display:flex;flex-direction:column;align-items:flex-end;gap:4px}
+.fmini-chip{font-size:.62rem;font-weight:700;padding:3px 8px;border-radius:5px;backdrop-filter:blur(8px);background:rgba(0,0,0,.56);color:rgba(255,255,255,.85);white-space:nowrap}
+.fmini-chip.pred{background:rgba(67,56,202,.72);color:#fff}
+.fmini-chip.up{background:rgba(185,28,28,.78);color:#fff}
+.fmini-chip.dn{background:rgba(22,163,74,.78);color:#fff}
+
+/* Risk badge on card */
+.risk-badge{
+  display:flex;align-items:center;gap:4px;
+  font-size:.65rem;font-weight:700;padding:3px 8px;border-radius:5px;backdrop-filter:blur(8px);
+  background:rgba(0,0,0,.56);color:rgba(255,255,255,.85);white-space:nowrap;
+}
+.risk-badge.risk-low{background:rgba(22,163,74,.72);color:#fff}
+.risk-badge.risk-mid{background:rgba(180,83,9,.78);color:#fff}
+.risk-badge.risk-high{background:rgba(185,28,28,.88);color:#fff}
+
+.cinfo{padding:12px 14px 10px;display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.cname{font-size:.88rem;font-weight:700;color:var(--ink);margin-bottom:2px}
+.csrc{font-size:.69rem;color:var(--ink4)}
+.trend-pill{display:inline-flex;align-items:center;gap:4px;font-size:.71rem;font-weight:700;padding:4px 9px;border-radius:999px;white-space:nowrap;flex-shrink:0;margin-top:2px}
+.tp-up{background:var(--red-dim);color:var(--red)}
+.tp-dn{background:var(--green-dim);color:var(--green)}
+.tp-fl{background:var(--stone);color:var(--ink3)}
+.cbar-wrap{padding:0 14px 13px}
+.cbar-labels{display:flex;justify-content:space-between;margin-bottom:5px}
+.cbar-labels span{font-size:.67rem;color:var(--ink4);font-weight:500}
+.cbar-labels strong{font-size:.67rem;color:var(--ink3);font-weight:700}
+.cbar-track{height:4px;background:var(--stone);border-radius:99px;overflow:hidden}
+.cbar-fill{height:100%;border-radius:99px;transition:width .6s cubic-bezier(.16,1,.3,1),background .4s}
+
+/* conn */
+.conn-pill{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:600;color:var(--ink4);padding:5px 12px;border-radius:999px;background:var(--stone)}
+.cdot{width:7px;height:7px;border-radius:50%;background:var(--ink5);transition:all .4s}
+.cdot.on{background:var(--green);box-shadow:0 0 6px rgba(22,163,74,.5)}
+
+/* ── ALERT BELL BUTTON ── */
+.alert-bell-btn{
+  position:relative;
+  display:flex;align-items:center;gap:7px;
+  font-family:var(--sans);font-weight:600;font-size:.8rem;
+  background:var(--stone);color:var(--ink3);
+  border:1.5px solid var(--stone2);border-radius:var(--r-sm);
+  padding:7px 13px;cursor:pointer;transition:all .17s;
+}
+.alert-bell-btn:hover{border-color:var(--indigo);color:var(--indigo);background:var(--indigo-dim)}
+.alert-bell-btn.has-alert{
+  background:var(--red-dim);color:var(--red);border-color:rgba(185,28,28,.3);
+  animation:bell-shake 2.5s ease-in-out infinite;
+}
+@keyframes bell-shake{0%,90%,100%{transform:rotate(0)}92%{transform:rotate(-6deg)}94%{transform:rotate(6deg)}96%{transform:rotate(-4deg)}98%{transform:rotate(4deg)}}
+.alert-badge{
+  position:absolute;top:-6px;right:-6px;
+  min-width:18px;height:18px;padding:0 4px;border-radius:999px;
+  background:var(--red);color:#fff;font-size:.6rem;font-weight:800;
+  display:flex;align-items:center;justify-content:center;
+  border:2px solid var(--bg);line-height:1;
+  transition:all .3s;
+}
+.alert-badge.hidden-badge{display:none}
+
+/* ── ALERT DRAWER ── */
+@keyframes drawer-in{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+@keyframes drawer-out{from{transform:translateX(0);opacity:1}to{transform:translateX(100%);opacity:0}}
+@keyframes new-log-in{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+
+.alert-drawer-bg{
+  position:fixed;inset:0;z-index:400;
+  background:rgba(24,21,15,.25);
+  backdrop-filter:blur(2px);
+  animation:modal-bg-in .2s ease;
+}
+.alert-drawer{
+  position:fixed;top:0;right:0;bottom:0;z-index:401;
+  width:360px;max-width:100vw;
+  background:var(--white);border-left:1px solid var(--stone2);
+  box-shadow:-12px 0 48px rgba(0,0,0,.12);
+  display:flex;flex-direction:column;
+  animation:drawer-in .3s cubic-bezier(.16,1,.3,1);
+}
+.alert-drawer.closing{animation:drawer-out .25s ease forwards}
+.drawer-header{
+  padding:18px 20px;border-bottom:1px solid var(--stone2);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+}
+.drawer-title{font-size:.95rem;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:8px}
+.drawer-header-right{display:flex;align-items:center;gap:8px}
+.drawer-clear{font-size:.72rem;font-weight:700;color:var(--ink4);cursor:pointer;padding:4px 8px;border-radius:5px;transition:all .14s}
+.drawer-clear:hover{background:var(--red-dim);color:var(--red)}
+.drawer-close{
+  width:28px;height:28px;border:none;background:var(--stone);
+  border-radius:6px;cursor:pointer;color:var(--ink3);
+  display:flex;align-items:center;justify-content:center;font-size:.78rem;transition:all .14s;
+}
+.drawer-close:hover{background:var(--stone2);color:var(--ink)}
+
+/* Active alerts section */
+.drawer-section{padding:14px 16px;border-bottom:1px solid var(--stone2);flex-shrink:0}
+.drawer-section-title{font-size:.63rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4);margin-bottom:10px}
+.active-alerts{display:flex;flex-direction:column;gap:8px}
+.active-alert-item{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 12px;border-radius:var(--r-sm);
+  border:1.5px solid rgba(185,28,28,.25);
+  background:var(--red-dim);
+  animation:new-log-in .25s ease;
+}
+.aai-dot{width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0;animation:ripple 1s ease-out infinite}
+.aai-body{flex:1;min-width:0}
+.aai-cam{font-size:.82rem;font-weight:700;color:var(--red)}
+.aai-msg{font-size:.75rem;color:var(--ink3);margin-top:1px}
+.aai-time{font-size:.65rem;color:var(--ink4);margin-top:3px;font-family:monospace}
+.aai-view{
+  font-size:.68rem;font-weight:700;color:var(--indigo);
+  background:var(--indigo-dim);border:1px solid rgba(67,56,202,.18);
+  padding:4px 9px;border-radius:5px;cursor:pointer;white-space:nowrap;
+  transition:all .14s;flex-shrink:0;
+}
+.aai-view:hover{background:var(--indigo);color:#fff}
+.no-active-alerts{font-size:.8rem;color:var(--ink4);text-align:center;padding:12px 0;font-style:italic}
+
+/* Log list */
+.drawer-log{flex:1;overflow-y:auto;padding:14px 16px;display:flex;flex-direction:column;gap:7px}
+.log-entry{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:9px 11px;border-radius:var(--r-sm);
+  border-left:3px solid;
+  animation:new-log-in .22s ease;
+}
+.le-crit{background:var(--red-dim);border-color:var(--red)}
+.le-warn{background:var(--amber-dim);border-color:var(--amber)}
+.le-ok{background:var(--green-dim);border-color:var(--green)}
+.le-info{background:var(--indigo-dim);border-color:var(--indigo)}
+.le-icon{font-size:.78rem;margin-top:1px;flex-shrink:0}
+.le-crit .le-icon{color:var(--red)}.le-warn .le-icon{color:var(--amber)}.le-ok .le-icon{color:var(--green)}.le-info .le-icon{color:var(--indigo)}
+.le-txt{font-size:.79rem;font-weight:600;color:var(--ink);line-height:1.38}
+.le-time{font-size:.64rem;color:var(--ink4);margin-top:3px;font-family:monospace}
+.log-empty-state{text-align:center;padding:32px 16px;color:var(--ink4)}
+.log-empty-state i{font-size:1.5rem;opacity:.2;display:block;margin-bottom:9px}
+.log-empty-state p{font-size:.78rem;line-height:1.6}
+
+/* ── CAMERA CARD REMOVE ── */
+.cam-remove-btn{
+  width:28px;height:28px;border:none;border-radius:7px;
+  background:transparent;color:var(--ink5);cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:.75rem;
+  transition:all .15s;flex-shrink:0;
+  /* hidden by default, shown on hover */
+  opacity:0;
+}
+.cam-card:hover .cam-remove-btn{opacity:1}
+.cam-remove-btn:hover{background:var(--red-dim);color:var(--red)}
+
+/* Confirm-remove overlay on the card */
+.cam-confirm-overlay{
+  position:absolute;inset:0;z-index:10;
+  background:rgba(249,248,245,.96);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;padding:20px;
+  border-radius:var(--r);
+  animation:popin .18s ease;
+}
+.cam-confirm-overlay .co-icon{
+  width:44px;height:44px;border-radius:50%;
+  background:var(--red-dim);border:1.5px solid rgba(185,28,28,.2);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--red);font-size:1rem;
+}
+.cam-confirm-overlay .co-msg{
+  font-size:.84rem;font-weight:700;color:var(--ink);text-align:center;line-height:1.4;
+}
+.cam-confirm-overlay .co-sub{
+  font-size:.72rem;color:var(--ink4);text-align:center;margin-top:-6px;
+}
+.cam-confirm-overlay .co-btns{display:flex;gap:8px}
+.co-btn-cancel{
+  font-family:var(--sans);font-size:.78rem;font-weight:600;
+  padding:8px 16px;border-radius:var(--r-sm);cursor:pointer;
+  background:var(--stone);color:var(--ink3);border:1px solid var(--stone2);
+  transition:all .14s;
+}
+.co-btn-cancel:hover{background:var(--stone2);color:var(--ink)}
+.co-btn-remove{
+  font-family:var(--sans);font-size:.78rem;font-weight:700;
+  padding:8px 16px;border-radius:var(--r-sm);cursor:pointer;
+  background:var(--red);color:#fff;border:none;
+  transition:all .14s;
+}
+.co-btn-remove:hover{background:#991b1b;transform:translateY(-1px)}
+.ops-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  background:var(--ink);border-radius:var(--r);
+  overflow:hidden;border:1px solid rgba(255,255,255,.06);
+}
+@media(max-width:860px){.ops-strip{grid-template-columns:repeat(2,1fr)}}
+.ops-cell{
+  padding:14px 18px;border-right:1px solid rgba(255,255,255,.07);
+  display:flex;align-items:center;gap:12px;
+}
+.ops-cell:last-child{border-right:none}
+.ops-cell-icon{
+  width:32px;height:32px;border-radius:8px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:.82rem;
+}
+.ops-ci-indigo{background:rgba(67,56,202,.25);color:#a5b4fc}
+.ops-ci-green{background:rgba(22,163,74,.2);color:#6ee7b7}
+.ops-ci-amber{background:rgba(180,83,9,.22);color:#fcd34d}
+.ops-ci-red{background:rgba(185,28,28,.22);color:#fca5a5}
+.ops-cell-body{}
+.ops-cell-val{font-size:1.1rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-.02em}
+.ops-cell-lbl{font-size:.6rem;font-weight:700;color:rgba(255,255,255,.3);text-transform:uppercase;letter-spacing:.1em;margin-top:2px}
+
+/* ── DASHBOARD LAYOUT WITH ACTIVITY PANEL ── */
+.dash-main-row{display:grid;grid-template-columns:1fr 280px;gap:16px;align-items:start}
+@media(max-width:1100px){.dash-main-row{grid-template-columns:1fr}}
+
+/* Activity panel */
+.activity-panel{
+  background:var(--white);border:1px solid var(--stone2);border-radius:var(--r);
+  box-shadow:var(--sh-xs);overflow:hidden;position:sticky;top:80px;
+}
+.ap-header{padding:14px 16px;border-bottom:1px solid var(--stone2);display:flex;align-items:center;justify-content:space-between}
+.ap-title{font-size:.78rem;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px}
+.ap-live-dot{width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.5);animation:breathe 2s ease-in-out infinite}
+.ap-feed{padding:0;max-height:420px;overflow-y:auto}
+.ap-item{
+  display:flex;gap:10px;align-items:flex-start;
+  padding:11px 14px;border-bottom:1px solid var(--stone);
+  transition:background .15s;
+}
+.ap-item:last-child{border-bottom:none}
+.ap-item:hover{background:var(--stone)}
+.ap-item-icon{
+  width:28px;height:28px;border-radius:7px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:.75rem;margin-top:1px;
+}
+.ap-icon-safe{background:var(--green-dim);color:var(--green)}
+.ap-icon-warn{background:var(--amber-dim);color:var(--amber)}
+.ap-icon-crit{background:var(--red-dim);color:var(--red)}
+.ap-icon-info{background:var(--indigo-dim);color:var(--indigo)}
+.ap-body{flex:1;min-width:0}
+.ap-msg{font-size:.78rem;font-weight:600;color:var(--ink);line-height:1.4}
+.ap-time{font-size:.65rem;color:var(--ink4);margin-top:3px;font-family:monospace}
+.ap-empty{padding:28px 16px;text-align:center;color:var(--ink4)}
+.ap-empty i{font-size:1.4rem;opacity:.18;display:block;margin-bottom:9px}
+.ap-empty p{font-size:.76rem;line-height:1.6}
+@media(max-width:1100px){.activity-panel{display:none}}
+
+/* ═══════════════════════════
+   CAMERA DETAIL MODAL
+═══════════════════════════ */
+.cam-modal-bg{
+  position:fixed;inset:0;z-index:200;
+  background:rgba(24,21,15,.58);backdrop-filter:blur(10px);
+  display:flex;align-items:center;justify-content:center;padding:16px;
+  animation:modal-bg-in .22s ease;
+}
+.cam-modal{
+  background:var(--white);border-radius:var(--r-xl);border:1px solid var(--stone2);
+  box-shadow:var(--sh-xl);width:100%;max-width:820px;max-height:92vh;overflow-y:auto;
+  animation:modal-slide .28s cubic-bezier(.16,1,.3,1);
+}
+.cam-modal-feed{position:relative;aspect-ratio:16/9;background:#0A0A0A;border-radius:var(--r-xl) var(--r-xl) 0 0;overflow:hidden}
+.cam-modal-feed img{width:100%;height:100%;object-fit:cover;display:block}
+.cam-modal-feed .fov{padding:14px}
+.modal-close-btn{
+  position:absolute;top:14px;right:14px;z-index:10;
+  width:36px;height:36px;border-radius:50%;background:rgba(0,0,0,.6);
+  border:none;color:#fff;cursor:pointer;font-size:.9rem;
+  display:flex;align-items:center;justify-content:center;transition:background .15s;
+}
+.modal-close-btn:hover{background:rgba(0,0,0,.88)}
+.cam-modal-body{padding:22px 26px}
+.cmd-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:20px;flex-wrap:wrap}
+.cmd-cam-name{font-family:var(--serif);font-size:1.6rem;color:var(--ink);margin-bottom:4px}
+.cmd-cam-src{font-size:.78rem;color:var(--ink4)}
+.modal-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:18px}
+@media(max-width:580px){.modal-stats{grid-template-columns:repeat(2,1fr)}}
+.mstat{background:var(--stone);border-radius:var(--r-sm);padding:14px;border:1px solid var(--stone2)}
+.mstat-lbl{font-size:.63rem;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px}
+.mstat-val{font-size:1.7rem;font-weight:800;color:var(--ink);line-height:1;letter-spacing:-.03em}
+.mstat-val.c-i{color:var(--indigo)}.mstat-val.c-a{color:var(--amber)}.mstat-val.c-r{color:var(--red)}.mstat-val.c-g{color:var(--green)}
+.mstat-sub{font-size:.67rem;color:var(--ink4);margin-top:4px}
+
+/* Risk meter */
+.risk-meter{
+  background:var(--stone);border:1px solid var(--stone2);border-radius:var(--r-sm);
+  padding:16px 18px;margin-bottom:18px;
+  display:flex;align-items:center;gap:18px;
+}
+.risk-dial{position:relative;width:72px;height:72px;flex-shrink:0}
+.risk-dial svg{width:72px;height:72px}
+.risk-dial-val{
+  position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font-size:1.1rem;font-weight:800;line-height:1;
+}
+.risk-info{}
+.risk-info-title{font-size:.78rem;font-weight:700;color:var(--ink);margin-bottom:4px}
+.risk-info-desc{font-size:.73rem;color:var(--ink3);line-height:1.5}
+.risk-info-label{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;
+  padding:3px 9px;border-radius:999px;margin-top:6px}
+
+/* Prediction section */
+.pred-section{
+  background:linear-gradient(135deg,var(--ink) 0%,var(--ink2) 100%);
+  border-radius:var(--r);padding:18px 20px;margin-bottom:18px;
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+}
+.pred-left .pred-lbl{font-size:.62rem;font-weight:700;color:rgba(255,255,255,.35);letter-spacing:.16em;text-transform:uppercase;margin-bottom:6px}
+.pred-left .pred-val{font-size:3rem;font-weight:800;color:#fff;line-height:1;letter-spacing:-.04em}
+.pred-left .pred-val span{font-size:.7rem;color:rgba(255,255,255,.4);letter-spacing:.1em;text-transform:uppercase;font-weight:600;margin-left:4px;vertical-align:middle}
+.pred-right{display:flex;flex-direction:column;gap:8px;align-items:flex-end}
+.pred-right label{font-size:.7rem;color:rgba(255,255,255,.4);font-weight:600;letter-spacing:.05em}
+.pred-right select{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:var(--r-sm);padding:7px 11px;color:#fff;font-family:var(--sans);font-size:.8rem;font-weight:600;outline:none;cursor:pointer}
+.pred-right select option{background:#1e1b14;color:#fff}
+.pred-trend{display:flex;align-items:center;gap:6px;font-size:.78rem;font-weight:700;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.1);color:rgba(255,255,255,.8)}
+.pred-trend.up{background:rgba(185,28,28,.3);color:#fca5a5}
+.pred-trend.dn{background:rgba(22,163,74,.25);color:#86efac}
+
+/* Chart */
+.modal-chart-section{margin-bottom:16px}
+.modal-chart-title{font-size:.83rem;font-weight:700;color:var(--ink);margin-bottom:12px;display:flex;align-items:center;gap:7px}
+.modal-chart-wrap{height:180px;background:var(--stone);border-radius:var(--r-sm);padding:14px;border:1px solid var(--stone2)}
+.cluster-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:4px}
+.clust-item{background:var(--stone);border:1px solid var(--stone2);border-radius:var(--r-sm);padding:13px 14px}
+.clust-lbl{font-size:.63rem;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px}
+.clust-val{font-size:1.4rem;font-weight:800;color:var(--ink);line-height:1}
+
+/* ═══════════════════════════
+   ADD CAMERA MODAL
+═══════════════════════════ */
+.add-modal-bg{position:fixed;inset:0;z-index:300;background:rgba(24,21,15,.45);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;padding:18px;animation:modal-bg-in .2s ease}
+.add-modal{background:var(--white);border-radius:var(--r-xl);border:1px solid var(--stone2);box-shadow:var(--sh-xl);padding:32px;width:100%;max-width:420px;animation:modal-slide .22s cubic-bezier(.16,1,.3,1)}
+.add-modal-h{font-family:var(--serif);font-size:1.4rem;color:var(--ink);margin-bottom:4px}
+.add-modal-sub{font-size:.8rem;color:var(--ink3);margin-bottom:20px;line-height:1.5}
+.add-modal-foot{display:flex;gap:9px;justify-content:flex-end;margin-top:20px}
+.type-row{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-bottom:13px}
+.tcard{padding:11px 7px;border-radius:var(--r-sm);border:1.5px solid var(--stone2);background:var(--stone);cursor:pointer;text-align:center;transition:all .14s}
+.tcard.on{border-color:var(--indigo);background:var(--indigo-dim)}
+.tcard i{font-size:1.1rem;color:var(--ink4);display:block;margin-bottom:5px}
+.tcard.on i{color:var(--indigo)}
+.tcard span{font-size:.69rem;font-weight:700;color:var(--ink3)}
+.tcard.on span{color:var(--indigo)}
+
+/* ═══ AUTH REDESIGN ═══ */
+.auth-page{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 62px)}
+@media(max-width:820px){.auth-page{grid-template-columns:1fr}}
+.auth-left{
+  background:linear-gradient(150deg,var(--ink) 0%,#1a1730 60%,var(--ink2) 100%);
+  padding:52px 44px;display:flex;flex-direction:column;justify-content:center;
+  position:relative;overflow:hidden;
+}
+@media(max-width:820px){.auth-left{display:none}}
+.auth-left::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(67,56,202,.07) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(67,56,202,.07) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse 100% 100% at 10% 50%,black 10%,transparent 75%);
+}
+.auth-left-orb{
+  position:absolute;width:320px;height:320px;border-radius:50%;
+  background:radial-gradient(circle,rgba(67,56,202,.18) 0%,transparent 70%);
+  top:-60px;right:-60px;pointer-events:none;
+}
+.auth-left-badge{
+  display:inline-flex;align-items:center;gap:7px;background:rgba(67,56,202,.22);color:#a5b4fc;
+  font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:5px 13px;border-radius:999px;
+  margin-bottom:28px;border:1px solid rgba(67,56,202,.28);width:fit-content;position:relative;z-index:1;
+}
+.auth-left-badge .auth-live-dot{width:6px;height:6px;border-radius:50%;background:#a5b4fc;animation:breathe 2s ease-in-out infinite}
+.auth-left-h{font-family:var(--serif);font-size:2.3rem;color:#fff;line-height:1.12;margin-bottom:16px;position:relative;z-index:1}
+.auth-left-h em{font-style:italic;color:rgba(255,255,255,.45)}
+.auth-left-p{font-size:.86rem;color:rgba(255,255,255,.4);line-height:1.72;margin-bottom:36px;position:relative;z-index:1;max-width:320px}
+.auth-feats{display:flex;flex-direction:column;gap:14px;position:relative;z-index:1}
+.auth-feat{display:flex;align-items:flex-start;gap:12px}
+.auth-feat-icon{width:34px;height:34px;border-radius:9px;background:rgba(67,56,202,.28);
+  display:flex;align-items:center;justify-content:center;color:#a5b4fc;font-size:.85rem;flex-shrink:0;border:1px solid rgba(67,56,202,.2)}
+.auth-feat-title{font-size:.82rem;font-weight:700;color:#fff;margin-bottom:2px}
+.auth-feat-desc{font-size:.74rem;color:rgba(255,255,255,.38);line-height:1.5}
+.auth-quote{
+  margin-top:36px;padding:18px 20px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+  border-radius:var(--r);position:relative;z-index:1;
+}
+.auth-quote-text{font-size:.82rem;color:rgba(255,255,255,.6);line-height:1.65;font-style:italic;margin-bottom:10px}
+.auth-quote-auth{font-size:.7rem;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.05em}
+.auth-right{display:flex;align-items:center;justify-content:center;padding:38px 32px;background:var(--bg)}
+.auth-box{width:100%;max-width:380px}
+.auth-h{font-family:var(--serif);font-size:1.7rem;color:var(--ink);margin-bottom:4px}
+.auth-sub{font-size:.82rem;color:var(--ink3);margin-bottom:24px;line-height:1.5}
+
+/* ═══ SETUP REDESIGN ═══ */
+.setup-page{display:grid;grid-template-columns:1fr 1fr;min-height:calc(100vh - 62px)}
+@media(max-width:900px){.setup-page{grid-template-columns:1fr}}
+.setup-left{padding:44px 40px;background:var(--bg);overflow-y:auto}
+.setup-right{
+  background:linear-gradient(150deg,var(--ink) 0%,#1a1730 60%,var(--ink2) 100%);
+  padding:44px 40px;display:flex;flex-direction:column;justify-content:flex-start;
+  position:relative;overflow:hidden;
+}
+@media(max-width:900px){.setup-right{display:none}}
+.setup-right::before{
+  content:'';position:absolute;inset:0;
+  background-image:linear-gradient(rgba(67,56,202,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(67,56,202,.06) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse 100% 100% at 90% 30%,black 10%,transparent 70%);
+}
+.setup-right-orb{position:absolute;width:280px;height:280px;border-radius:50%;background:radial-gradient(circle,rgba(67,56,202,.16) 0%,transparent 70%);bottom:-80px;left:-60px;pointer-events:none}
+.setup-right-content{position:relative;z-index:1}
+.setup-right-badge{display:inline-flex;align-items:center;gap:7px;background:rgba(67,56,202,.22);color:#a5b4fc;font-size:.7rem;font-weight:700;letter-spacing:.08em;padding:5px 13px;border-radius:999px;margin-bottom:24px;border:1px solid rgba(67,56,202,.28)}
+.setup-right-h{font-family:var(--serif);font-size:1.9rem;color:#fff;line-height:1.12;margin-bottom:14px}
+.setup-right-h em{font-style:italic;color:rgba(255,255,255,.4)}
+.setup-right-p{font-size:.84rem;color:rgba(255,255,255,.38);line-height:1.7;margin-bottom:32px;max-width:300px}
+.setup-steps{display:flex;flex-direction:column;gap:0}
+.setup-step{display:flex;gap:14px;padding:16px 0;border-bottom:1px solid rgba(255,255,255,.07)}
+.setup-step:last-child{border-bottom:none}
+.setup-step-num{font-family:var(--serif);font-size:1.6rem;color:rgba(67,56,202,.5);line-height:1;width:28px;flex-shrink:0;margin-top:2px}
+.setup-step-title{font-size:.83rem;font-weight:700;color:#fff;margin-bottom:4px}
+.setup-step-desc{font-size:.75rem;color:rgba(255,255,255,.38);line-height:1.55}
+.setup-status-block{
+  margin-top:28px;padding:16px 18px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+  border-radius:var(--r);
+}
+.setup-status-label{font-size:.65rem;font-weight:700;color:rgba(255,255,255,.3);letter-spacing:.12em;text-transform:uppercase;margin-bottom:10px}
+.setup-status-item{display:flex;align-items:center;gap:9px;margin-bottom:8px;font-size:.78rem;color:rgba(255,255,255,.5)}
+.setup-status-item:last-child{margin-bottom:0}
+.setup-status-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.ssd-green{background:var(--green);box-shadow:0 0 5px rgba(22,163,74,.5)}
+.ssd-amber{background:var(--amber)}
+.ssd-grey{background:rgba(255,255,255,.2)}
+</style>
+</head>
+<body>
+
+<!-- notification container removed — using alert drawer instead -->
+
+<!-- ════════════════════════════════════════════════
+     HOME PAGE — full scrollable landing
+════════════════════════════════════════════════ -->
+<section id="pageHome" class="hidden">
+<nav class="nav">
+  <div class="logo" id="navLogo"><div class="logo-mark"></div>AuraView</div>
+  <div class="nav-r">
+    <button class="btn btn-outline btn-sm" id="h-signin">Sign in</button>
+    <button class="btn btn-indigo btn-sm" id="h-start">Get started free</button>
+  </div>
+</nav>
+
+<!-- Hero -->
+<div class="hero">
+  <div class="hero-chip rise">
+    <span class="pulse"></span>
+    Live Crowd Intelligence Platform
+  </div>
+  <h1 class="hero-h1 rise d1">Know when any space gets <em>too crowded.</em></h1>
+  <p class="hero-p rise d2">AuraView watches your cameras, counts every person in real time, and alerts you the moment a space needs attention. Built for security teams, event managers, and facility operators.</p>
+  <div class="hero-cta rise d3">
+    <button class="btn btn-indigo btn-lg" id="h-start2"><i class="fa-solid fa-play"></i> Start monitoring free</button>
+    <button class="btn btn-outline btn-lg" onclick="document.getElementById('how-it-works').scrollIntoView({behavior:'smooth'})">See how it works <i class="fa-solid fa-arrow-down"></i></button>
+  </div>
+
+  <!-- Animated dashboard preview -->
+  <div class="hero-preview rise d4">
+    <div class="hp-topbar">
+      <div class="hp-dots">
+        <div class="hp-dot" style="background:#ff5f57"></div>
+        <div class="hp-dot" style="background:#febc2e"></div>
+        <div class="hp-dot" style="background:#28c840"></div>
+      </div>
+      <div class="hp-title">AuraView Dashboard — 3 Cameras Active</div>
+    </div>
+    <div class="hp-body">
+      <div class="hp-cam hp-cam1">
+        <div class="hp-cam-fill">
+          <div class="hp-cam-count">14</div>
+          <div class="hp-cam-status" style="background:rgba(22,163,74,.8);color:#fff">Safe</div>
+        </div>
+      </div>
+      <div class="hp-cam hp-cam2">
+        <div class="hp-cam-fill">
+          <div class="hp-cam-count">8</div>
+          <div class="hp-cam-status" style="background:rgba(22,163,74,.8);color:#fff">Safe</div>
+        </div>
+      </div>
+      <div class="hp-cam hp-cam3">
+        <div class="hp-cam-fill">
+          <div class="hp-cam-count">23</div>
+          <div class="hp-cam-status" style="background:rgba(185,28,28,.85);color:#fff">Alert!</div>
+        </div>
+      </div>
+    </div>
+    <div class="hp-stats">
+      <div class="hp-stat">
+        <div class="hp-stat-val c-i">45</div>
+        <div class="hp-stat-lbl">Total People</div>
+      </div>
+      <div class="hp-stat">
+        <div class="hp-stat-val c-r">1 Alert</div>
+        <div class="hp-stat-lbl">Active Now</div>
+      </div>
+      <div class="hp-stat">
+        <div class="hp-stat-val c-a">+2.3</div>
+        <div class="hp-stat-lbl">Trend / min</div>
+      </div>
+      <div class="hp-stat">
+        <div class="hp-stat-val c-g">~52</div>
+        <div class="hp-stat-lbl">5-min Forecast</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Stats ticker -->
+<div class="stats-ticker">
+  <div class="ticker-stat"><div class="ticker-stat-val">99.2%</div><div class="ticker-stat-lbl">Detection Accuracy</div></div>
+  <div class="ticker-stat"><div class="ticker-stat-val">16</div><div class="ticker-stat-lbl">Max Cameras</div></div>
+  <div class="ticker-stat"><div class="ticker-stat-val">&lt;200ms</div><div class="ticker-stat-lbl">Real-time Latency</div></div>
+  <div class="ticker-stat"><div class="ticker-stat-val">24 / 7</div><div class="ticker-stat-lbl">Continuous Monitoring</div></div>
+</div>
+
+<!-- How it works -->
+<div id="how-it-works" class="section">
+  <div class="section-eyebrow">How it works</div>
+  <h2 class="section-h">Set up in under <em style="font-style:italic;color:var(--indigo)">two minutes.</em></h2>
+  <p class="section-p">No hardware, no complex installation. Just paste your camera URL and AuraView starts monitoring immediately.</p>
+  <div class="steps-grid">
+    <div class="step">
+      <div class="step-num">01</div>
+      <div class="step-icon"><i class="fa-solid fa-link"></i></div>
+      <div class="step-title">Add your camera</div>
+      <div class="step-desc">Paste a YouTube Live link, enter 0 for your webcam, or provide an RTSP address. AuraView connects instantly to any source.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <div class="step-icon"><i class="fa-solid fa-sliders"></i></div>
+      <div class="step-title">Set your threshold</div>
+      <div class="step-desc">Tell AuraView the maximum safe number of people for each location. Each camera can have its own independent limit.</div>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <div class="step-icon"><i class="fa-solid fa-eye"></i></div>
+      <div class="step-title">Watch it live</div>
+      <div class="step-desc">Your dashboard shows each camera's live count, trend, and prediction. Click any camera for full detailed analytics.</div>
+    </div>
+  </div>
+</div>
+
+<!-- Features deep dive -->
+<div class="features-section">
+  <div class="features-inner">
+    <div class="features-eyebrow">What you get</div>
+    <h2 class="features-h">Everything you need to keep <em>any space safe.</em></h2>
+    <div class="feat-grid">
+      <div class="feat-card">
+        <div class="feat-card-icon"><i class="fa-solid fa-video"></i></div>
+        <div class="feat-card-title">Multi-camera monitoring</div>
+        <div class="feat-card-desc">Connect up to 16 cameras simultaneously. Each one runs independently with its own count, trend, prediction, and alert settings.</div>
+        <div class="feat-card-tag"><i class="fa-solid fa-check"></i> Up to 16 cameras</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-card-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <div class="feat-card-title">Per-camera crowd prediction</div>
+        <div class="feat-card-desc">Each camera has its own AI trend model that forecasts crowd density 1–15 minutes ahead, so you can act before a situation develops.</div>
+        <div class="feat-card-tag"><i class="fa-solid fa-check"></i> Individual forecasts</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-card-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="feat-card-title">Smart risk scoring</div>
+        <div class="feat-card-desc">Every camera gets a 0–100 risk score based on crowd density, clustering behaviour, and congestion. Color-coded so it's instant to understand.</div>
+        <div class="feat-card-tag"><i class="fa-solid fa-check"></i> Risk 0–100</div>
+      </div>
+      <div class="feat-card">
+        <div class="feat-card-icon"><i class="fa-solid fa-bell"></i></div>
+        <div class="feat-card-title">Plain-English alert notifications</div>
+        <div class="feat-card-desc">Toast notifications appear instantly for every status change — "Crowd alert at Main Entrance — 18 people." No codes, no guessing where to look.</div>
+        <div class="feat-card-tag"><i class="fa-solid fa-check"></i> Instant toasts + SMS</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Alert types explained -->
+<div class="alerts-section">
+  <div class="alerts-inner">
+    <div class="section-eyebrow">Alert system</div>
+    <h2 class="section-h">Three levels. Always clear.</h2>
+    <p class="section-p">AuraView uses a simple traffic-light system so any team member understands the situation instantly — no training required.</p>
+    <div class="alert-types-grid">
+      <div class="alert-type-card at-safe">
+        <div class="at-icon"><i class="fa-solid fa-shield-check"></i></div>
+        <div class="at-title">Safe</div>
+        <div class="at-desc">The location is within normal limits. Crowd count is comfortably below the threshold. No action needed.</div>
+        <div class="at-trigger">Trigger: Count &lt; 60% of limit</div>
+      </div>
+      <div class="alert-type-card at-warn">
+        <div class="at-icon"><i class="fa-solid fa-circle-exclamation"></i></div>
+        <div class="at-title">Heads Up</div>
+        <div class="at-desc">Crowd is growing toward the limit. A warning notification appears so you can prepare — not panic.</div>
+        <div class="at-trigger">Trigger: Count is 60–99% of limit</div>
+      </div>
+      <div class="alert-type-card at-danger">
+        <div class="at-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+        <div class="at-title">Action Needed</div>
+        <div class="at-desc">The threshold has been crossed. A full alert banner fires, toast notification appears, and SMS is sent to your team.</div>
+        <div class="at-trigger">Trigger: Count ≥ limit</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Use cases -->
+<div class="usecases-section">
+  <div class="section-eyebrow">Who uses AuraView</div>
+  <h2 class="section-h">Built for any space that matters.</h2>
+  <div class="usecases-grid">
+    <div class="usecase-card">
+      <span class="uc-emoji">🏟️</span>
+      <div class="uc-title">Event venues & stadiums</div>
+      <div class="uc-desc">Monitor entry gates, food courts, and exits in real time. Prevent dangerous crowd surges before they happen.</div>
+    </div>
+    <div class="usecase-card">
+      <span class="uc-emoji">🏫</span>
+      <div class="uc-title">Schools & universities</div>
+      <div class="uc-desc">Keep hallways, cafeterias, and common areas within safe occupancy levels automatically.</div>
+    </div>
+    <div class="usecase-card">
+      <span class="uc-emoji">🏬</span>
+      <div class="uc-title">Retail & shopping centres</div>
+      <div class="uc-desc">Track footfall across store sections. Manage capacity limits and staff deployment intelligently.</div>
+    </div>
+    <div class="usecase-card">
+      <span class="uc-emoji">🏥</span>
+      <div class="uc-title">Hospitals & clinics</div>
+      <div class="uc-desc">Monitor waiting rooms and reception areas. Ensure patients and staff are never in an overcrowded space.</div>
+    </div>
+    <div class="usecase-card">
+      <span class="uc-emoji">🚉</span>
+      <div class="uc-title">Transport hubs</div>
+      <div class="uc-desc">Watch platforms, terminals, and ticket halls. React to crowd buildup before it causes delays or incidents.</div>
+    </div>
+    <div class="usecase-card">
+      <span class="uc-emoji">🏢</span>
+      <div class="uc-title">Offices & workplaces</div>
+      <div class="uc-desc">Manage meeting room occupancy, lobby flow, and canteen capacity with zero manual counting.</div>
+    </div>
+  </div>
+</div>
+
+<!-- CTA -->
+<div class="cta-section">
+  <h2 class="cta-h">Ready to monitor your <em>first camera?</em></h2>
+  <p class="cta-p">Set up takes under two minutes. No hardware. No installation. Just paste your camera link and go.</p>
+  <div class="cta-btns">
+    <button class="btn btn-white btn-lg" id="cta-start"><i class="fa-solid fa-play"></i> Start for free</button>
+    <button class="btn btn-white-outline btn-lg">View documentation</button>
+  </div>
+</div>
+
+<!-- Footer -->
+<footer class="footer">
+  <div class="footer-brand">
+    <div class="footer-logo">
+      <div class="logo-mark"></div>
+      <div class="footer-logo-name">AuraView</div>
+    </div>
+    <div class="footer-tagline">Intelligent crowd monitoring for any space. Real-time. Simple. Reliable.</div>
+  </div>
+  <div>
+    <div class="footer-col-title">Platform</div>
+    <div class="footer-links">
+      <span class="footer-link">Dashboard</span>
+      <span class="footer-link">Multi-camera setup</span>
+      <span class="footer-link">Alert system</span>
+      <span class="footer-link">Predictions</span>
+    </div>
+  </div>
+  <div>
+    <div class="footer-col-title">Technology</div>
+    <div class="footer-links">
+      <span class="footer-link">YOLOv8 detection</span>
+      <span class="footer-link">RTSP / YouTube / Webcam</span>
+      <span class="footer-link">SMS via Twilio</span>
+      <span class="footer-link">Supabase auth</span>
+    </div>
+  </div>
+  <div>
+    <div class="footer-col-title">Support</div>
+    <div class="footer-links">
+      <span class="footer-link">Documentation</span>
+      <span class="footer-link">Setup guide</span>
+      <span class="footer-link">API reference</span>
+      <span class="footer-link">Contact</span>
+    </div>
+  </div>
+</footer>
+<div class="footer-bottom">
+  <div class="footer-copy">© 2025 AuraView. Crowd intelligence platform.</div>
+  <div class="footer-badges">
+    <span class="footer-badge">YOLOv8</span>
+    <span class="footer-badge">FastAPI</span>
+    <span class="footer-badge">Socket.IO</span>
+    <span class="footer-badge">Supabase</span>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════ AUTH ════════════════════ -->
+<section id="pageAuth" class="hidden">
+<nav class="nav">
+  <div class="logo" id="navLogoAuth"><div class="logo-mark"></div>AuraView</div>
+  <div class="nav-r"><button class="btn btn-ghost btn-sm" id="a-back"><i class="fa-solid fa-arrow-left"></i> Back</button></div>
+</nav>
+<div class="auth-page">
+  <!-- Left: visual panel -->
+  <div class="auth-left">
+    <div class="auth-left-orb"></div>
+    <div class="auth-left-badge"><span class="auth-live-dot"></span> Crowd Intelligence Platform</div>
+    <h2 class="auth-left-h">Monitor any space.<br><em>Stay ahead of crowds.</em></h2>
+    <p class="auth-left-p">Connect your cameras, set safety limits, and let AuraView do the watching. Real-time detection, instant alerts, per-camera analytics.</p>
+    <div class="auth-feats">
+      <div class="auth-feat">
+        <div class="auth-feat-icon"><i class="fa-solid fa-video"></i></div>
+        <div><div class="auth-feat-title">Any camera source</div><div class="auth-feat-desc">YouTube Live, webcam, or RTSP — connect in seconds</div></div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-icon"><i class="fa-solid fa-chart-line"></i></div>
+        <div><div class="auth-feat-title">Per-camera predictions</div><div class="auth-feat-desc">Individual AI trend models forecast crowds 1–15 min ahead</div></div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-icon"><i class="fa-solid fa-bell"></i></div>
+        <div><div class="auth-feat-title">Plain-English alerts</div><div class="auth-feat-desc">"Crowd alert at Main Entrance — 18 people." No jargon</div></div>
+      </div>
+      <div class="auth-feat">
+        <div class="auth-feat-icon"><i class="fa-solid fa-gauge-simple-high"></i></div>
+        <div><div class="auth-feat-title">0–100 risk scoring</div><div class="auth-feat-desc">Density, clustering, and congestion combined into one number</div></div>
+      </div>
+    </div>
+    <div class="auth-quote">
+      <div class="auth-quote-text">"Set up in under two minutes. We monitor 6 cameras across our venue and get SMS alerts the moment a zone gets crowded."</div>
+      <div class="auth-quote-auth">— Event Safety Manager, Stadium Operations</div>
+    </div>
+  </div>
+  <!-- Right: form -->
+  <div class="auth-right">
+    <div class="auth-box rise">
+      <h2 class="auth-h">Welcome back</h2>
+      <p class="auth-sub">Sign in to access your monitoring dashboard.</p>
+      <div class="tabs">
+        <div class="tab on" id="tabLogin">Sign in</div>
+        <div class="tab" id="tabSignup">Create account</div>
+      </div>
+      <div class="field"><label class="lbl">Email</label><input id="authEmail" class="inp" type="email" placeholder="you@example.com"/></div>
+      <div class="field" style="margin-bottom:8px"><label class="lbl">Password</label><input id="authPass" class="inp" type="password" placeholder="Your password"/></div>
+      <div id="authMsg" class="fmsg" style="margin-bottom:13px"></div>
+      <button id="btnAuth" class="btn btn-indigo" style="width:100%;justify-content:center;padding:12px;font-size:.88rem">Sign in</button>
+      <div style="margin-top:20px;padding-top:18px;border-top:1px solid var(--stone2)">
+        <div style="font-size:.72rem;font-weight:700;color:var(--ink4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:12px">Secured by</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <span style="font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:5px;background:var(--stone);color:var(--ink3);border:1px solid var(--stone2)"><i class="fa-solid fa-shield-halved" style="margin-right:4px;color:var(--indigo)"></i>Supabase Auth</span>
+          <span style="font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:5px;background:var(--stone);color:var(--ink3);border:1px solid var(--stone2)"><i class="fa-solid fa-lock" style="margin-right:4px;color:var(--indigo)"></i>Encrypted</span>
+          <span style="font-size:.72rem;font-weight:700;padding:4px 10px;border-radius:5px;background:var(--stone);color:var(--ink3);border:1px solid var(--stone2)"><i class="fa-solid fa-bolt" style="margin-right:4px;color:var(--indigo)"></i>Instant access</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════ SETUP ════════════════════ -->
+<section id="pageSetup" class="hidden">
+<nav class="nav">
+  <div class="logo" id="navLogoSetup"><div class="logo-mark"></div>AuraView</div>
+  <div class="nav-r">
+    <span id="userLbl" style="font-size:.74rem;color:var(--ink4);font-weight:500"></span>
+    <button class="btn btn-ghost btn-sm btn-icon" id="s-logout" title="Sign out"><i class="fa-solid fa-right-from-bracket"></i></button>
+  </div>
+</nav>
+<div class="setup-page">
+  <!-- Left: configuration -->
+  <div class="setup-left">
+    <div style="max-width:480px">
+      <h2 class="setup-h rise">Set up your cameras</h2>
+      <p class="setup-sub rise d1">Add each camera you want to monitor and give it a clear name — that name appears in every alert, so make it descriptive.</p>
+
+      <!-- Camera list -->
+      <div class="scard rise d2" style="margin-bottom:14px">
+        <div class="scard-t"><i class="fa-solid fa-video"></i> Your cameras <span id="camCntLbl" style="margin-left:auto;font-weight:700;color:var(--ink4);font-size:.66rem">0 added</span></div>
+        <div id="setupList">
+          <div style="text-align:center;padding:26px 10px;color:var(--ink4)">
+            <i class="fa-solid fa-video-slash" style="font-size:1.5rem;opacity:.22;display:block;margin-bottom:9px"></i>
+            <p style="font-size:.78rem;line-height:1.6">No cameras yet.<br>Add your first one below.</p>
+          </div>
+        </div>
+        <button class="add-btn" id="openAdd"><i class="fa-solid fa-plus"></i> Add a camera</button>
+      </div>
+
+      <!-- Alert settings — single threshold here, no duplicate -->
+      <div class="scard rise d3" style="margin-bottom:14px">
+        <div class="scard-t"><i class="fa-solid fa-bell"></i> Default alert threshold</div>
+        <div class="field" style="margin-bottom:14px">
+          <label class="lbl">Send alert when crowd exceeds</label>
+          <div style="position:relative">
+            <input id="thresholdValue" type="number" class="inp" value="10" min="1" style="padding-right:54px"/>
+            <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:.74rem;font-weight:600;color:var(--ink4)">people</span>
+          </div>
+          <p class="fnote">This is the default for all cameras. You can override it per-camera when adding them.</p>
+        </div>
+        <div class="field" style="margin-bottom:0">
+          <label class="lbl">Update AI predictions every</label>
+          <select id="trainIntervalValue" class="sel">
+            <option value="60000">Every 1 minute</option>
+            <option value="120000" selected>Every 2 minutes</option>
+            <option value="300000">Every 5 minutes</option>
+          </select>
+        </div>
+      </div>
+
+      <div id="setupMsg" class="fmsg" style="margin-bottom:10px;padding:0 2px"></div>
+      <button id="btnApply" class="btn btn-indigo rise d4" style="padding:13px;font-size:.9rem;justify-content:center;width:100%">
+        <i class="fa-solid fa-play"></i> Start monitoring
+      </button>
+      <p style="font-size:.71rem;color:var(--ink4);text-align:center;line-height:1.5;margin-top:10px">Add at least one camera to continue.</p>
+    </div>
+  </div>
+
+  <!-- Right: visual guide panel -->
+  <div class="setup-right">
+    <div class="setup-right-orb"></div>
+    <div class="setup-right-content">
+      <div class="setup-right-badge"><i class="fa-solid fa-circle-info"></i> Setup guide</div>
+      <h3 class="setup-right-h">Ready in <em>under two minutes.</em></h3>
+      <p class="setup-right-p">Just paste your camera link, give it a name, and click Start. AuraView handles everything else.</p>
+
+      <div class="setup-steps">
+        <div class="setup-step">
+          <div class="setup-step-num">01</div>
+          <div>
+            <div class="setup-step-title">Add your camera</div>
+            <div class="setup-step-desc">YouTube link, webcam (enter 0), or RTSP address. Each camera gets its own independent settings.</div>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-step-num">02</div>
+          <div>
+            <div class="setup-step-title">Set a crowd limit</div>
+            <div class="setup-step-desc">The default applies to all cameras. You can override it per camera in the Add Camera dialog.</div>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-step-num">03</div>
+          <div>
+            <div class="setup-step-title">Click Start monitoring</div>
+            <div class="setup-step-desc">AuraView connects to all cameras at once. You'll land directly on the live dashboard.</div>
+          </div>
+        </div>
+        <div class="setup-step">
+          <div class="setup-step-num">04</div>
+          <div>
+            <div class="setup-step-title">Click any camera for deep analytics</div>
+            <div class="setup-step-desc">Each feed shows live count, trend, and prediction. Click a card for the full risk meter, chart, and cluster analysis.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="setup-status-block" style="margin-top:28px">
+        <div class="setup-status-label">Source types supported</div>
+        <div class="setup-status-item"><div class="setup-status-dot ssd-green"></div>YouTube Live — paste the full video URL</div>
+        <div class="setup-status-item"><div class="setup-status-dot ssd-green"></div>Webcam — enter 0 for default, 1 for second device</div>
+        <div class="setup-status-item"><div class="setup-status-dot ssd-green"></div>RTSP — rtsp://user:pass@ip:554/stream</div>
+        <div class="setup-status-item" style="margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07)"><div class="setup-status-dot ssd-amber"></div>You can add more cameras from the dashboard anytime</div>
+      </div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ════════════════════ DASHBOARD ════════════════════ -->
+<section id="pageDash" class="hidden">
+<nav class="nav">
+  <div class="logo" id="navLogoDash"><div class="logo-mark"></div>AuraView</div>
+  <div class="nav-r">
+    <div class="conn-pill"><div id="cdot" class="cdot"></div><span id="ctext">Connecting…</span></div>
+
+    <!-- Alert bell — replaces old toast system -->
+    <button class="alert-bell-btn" id="alertBellBtn">
+      <i class="fa-solid fa-bell"></i>
+      <span id="alertBellLabel">Alerts</span>
+      <span id="alertBadge" class="alert-badge hidden-badge">0</span>
+    </button>
+
+    <button class="btn btn-outline btn-sm" id="btnHeatmap"><i class="fa-solid fa-fire"></i> Heatmap</button>
+    <button class="btn btn-ghost btn-sm btn-icon" id="btnFS"><i class="fa-solid fa-expand"></i></button>
+    <button class="btn btn-ghost btn-sm btn-icon" id="btnSettings"><i class="fa-solid fa-sliders"></i></button>
+    <button class="btn btn-redsft btn-sm btn-icon" id="d-logout"><i class="fa-solid fa-power-off"></i></button>
+  </div>
+</nav>
+
+<!-- Critical alert bar (only fires for DANGER, replaces per-camera spam) -->
+<div id="alertBar" class="alert-bar gone">
+  <div class="alert-bar-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+  <div class="alert-bar-msgs" id="alertBarMsgs"></div>
+  <button class="alert-bar-x" id="closeAlert"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<div class="dbody">
+
+  <!-- Summary strip -->
+  <div class="summary-row rise">
+    <div class="sv"><div class="sv-lbl">Total people now</div><div class="sv-val c-i" id="svTotal">0</div><div class="sv-note" id="svCams">across 0 cameras</div></div>
+    <div class="sv"><div class="sv-lbl">Overall status</div><div id="svStatus"><span class="spill sp-ok"><span class="sdot"></span>All clear</span></div></div>
+    <div class="sv"><div class="sv-lbl">Session peak</div><div class="sv-val c-a" id="svPeak">0</div><div class="sv-note">highest today</div></div>
+    <div class="sv"><div class="sv-lbl">Active cameras</div><div class="sv-val c-g" id="svCamCount">0</div><div class="sv-note">feeds running</div></div>
+  </div>
+
+  <!-- Ops strip — session context, makes dashboard feel inhabited -->
+  <div class="ops-strip rise d1">
+    <div class="ops-cell">
+      <div class="ops-cell-icon ops-ci-indigo"><i class="fa-solid fa-clock"></i></div>
+      <div class="ops-cell-body">
+        <div class="ops-cell-val" id="opsUptime">00:00</div>
+        <div class="ops-cell-lbl">Session uptime</div>
+      </div>
+    </div>
+    <div class="ops-cell">
+      <div class="ops-cell-icon ops-ci-amber"><i class="fa-solid fa-bell"></i></div>
+      <div class="ops-cell-body">
+        <div class="ops-cell-val" id="opsTotalAlerts">0</div>
+        <div class="ops-cell-lbl">Alerts this session</div>
+      </div>
+    </div>
+    <div class="ops-cell">
+      <div class="ops-cell-icon ops-ci-green"><i class="fa-solid fa-rotate"></i></div>
+      <div class="ops-cell-body">
+        <div class="ops-cell-val" id="opsLastSync">—</div>
+        <div class="ops-cell-lbl">Last model sync</div>
+      </div>
+    </div>
+    <div class="ops-cell">
+      <div class="ops-cell-icon ops-ci-red"><i class="fa-solid fa-gauge-simple-high"></i></div>
+      <div class="ops-cell-body">
+        <div class="ops-cell-val" id="opsMaxRisk">0</div>
+        <div class="ops-cell-lbl">Highest risk score</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cameras + Activity panel side by side -->
+  <div class="dash-main-row rise d2">
+    <!-- Camera grid -->
+    <div>
+      <div class="sec-hdr" style="margin-bottom:12px">
+        <span class="sec-title"><i class="fa-solid fa-video" style="color:var(--indigo)"></i> Live cameras (<span id="liveCnt">0</span>) <span class="sec-hint">· Click any camera for full analysis</span></span>
+        <button class="btn btn-outline btn-sm" id="dashAddCam"><i class="fa-solid fa-plus"></i> Add camera</button>
+      </div>
+      <div id="camsGrid" class="cams-grid"></div>
+    </div>
+
+    <!-- Activity panel -->
+    <div class="activity-panel">
+      <div class="ap-header">
+        <div class="ap-title">
+          <div class="ap-live-dot"></div>
+          Alert Log
+        </div>
+        <span style="font-size:.65rem;color:var(--ink4);font-weight:600" id="apCount">0 alerts</span>
+      </div>
+      <div class="ap-feed" id="apFeed">
+        <div class="ap-empty">
+          <i class="fa-solid fa-shield-check"></i>
+          <p>No alerts yet.<br>Threshold violations will appear here.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</section>
+
+<!-- ════════════════════ ALERT DRAWER ════════════════════ -->
+<div id="alertDrawerBg" class="alert-drawer-bg hidden" onclick="closeAlertDrawer()"></div>
+<div id="alertDrawer" class="alert-drawer hidden">
+  <div class="drawer-header">
+    <div class="drawer-title">
+      <i class="fa-solid fa-bell" style="color:var(--indigo)"></i>
+      Alert Centre
+    </div>
+    <div class="drawer-header-right">
+      <span class="drawer-clear" id="drawerClearBtn">Clear all</span>
+      <button class="drawer-close" id="drawerClose"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+
+  <!-- Active alerts -->
+  <div class="drawer-section">
+    <div class="drawer-section-title">Currently active</div>
+    <div id="drawerActiveAlerts">
+      <div class="no-active-alerts">No active alerts — all cameras are safe.</div>
+    </div>
+  </div>
+
+  <!-- Full log -->
+  <div class="drawer-section-title" style="padding:12px 16px 0;font-size:.63rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;color:var(--ink4)">Alert history</div>
+  <div class="drawer-log" id="drawerLog">
+    <div class="log-empty-state">
+      <i class="fa-regular fa-bell-slash"></i>
+      <p>No alerts yet.<br>Everything is quiet.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ CAMERA DETAIL MODAL ════════════════════ -->
+<div id="camModal" class="cam-modal-bg hidden">
+  <div class="cam-modal">
+    <div class="cam-modal-feed">
+      <img id="modalFeedImg" src="" alt=""/>
+      <button class="modal-close-btn" id="modalClose"><i class="fa-solid fa-xmark"></i></button>
+      <div class="fov">
+        <div class="fov-top"><span class="fbadge fb-live"><i class="fa-solid fa-circle" style="font-size:.38rem"></i> Live</span><span class="fbadge" id="modalStatusBadge">SAFE</span></div>
+        <div class="fov-bot"><div class="fcount"><span id="modalCount">0</span><small>people in frame</small></div></div>
+      </div>
+    </div>
+    <div class="cam-modal-body">
+      <div class="cmd-header">
+        <div><div class="cmd-cam-name" id="modalCamName">Camera</div><div class="cmd-cam-src" id="modalCamSrc"></div></div>
+        <div id="modalStatusPill"></div>
+      </div>
+
+      <!-- 4 stat cards -->
+      <div class="modal-stats">
+        <div class="mstat"><div class="mstat-lbl">Live count</div><div class="mstat-val c-i" id="mCount">0</div><div class="mstat-sub">people now</div></div>
+        <div class="mstat"><div class="mstat-lbl">Session peak</div><div class="mstat-val c-a" id="mPeak">0</div><div class="mstat-sub">highest today</div></div>
+        <div class="mstat"><div class="mstat-lbl">Session avg</div><div class="mstat-val" id="mAvg">0</div><div class="mstat-sub">rolling mean</div></div>
+        <div class="mstat"><div class="mstat-lbl">Risk score</div><div class="mstat-val" id="mRiskVal">0</div><div class="mstat-sub">0 = safe, 100 = critical</div></div>
+      </div>
+
+      <!-- Risk meter -->
+      <div class="risk-meter">
+        <div class="risk-dial">
+          <svg viewBox="0 0 72 72" fill="none">
+            <circle cx="36" cy="36" r="30" stroke="#E3DFD7" stroke-width="6" fill="none"/>
+            <circle id="riskArc" cx="36" cy="36" r="30" stroke="#4338CA" stroke-width="6" fill="none"
+              stroke-dasharray="188.5" stroke-dashoffset="188.5"
+              stroke-linecap="round" transform="rotate(-90 36 36)"
+              style="transition:stroke-dashoffset .8s ease,stroke .5s"/>
+          </svg>
+          <div class="risk-dial-val"><span id="riskDialNum" style="color:var(--indigo)">0</span></div>
+        </div>
+        <div class="risk-info">
+          <div class="risk-info-title">Risk Assessment</div>
+          <div class="risk-info-desc" id="riskDesc">This camera is within safe operating limits. Crowd density, clustering, and congestion are all normal.</div>
+          <div class="risk-info-label" id="riskLabel" style="background:var(--green-dim);color:var(--green)"><i class="fa-solid fa-shield-check"></i> Low Risk</div>
+        </div>
+      </div>
+
+      <!-- Prediction -->
+      <div class="pred-section">
+        <div class="pred-left">
+          <div class="pred-lbl">Predicted crowd count</div>
+          <div class="pred-val"><span id="mPredVal">0</span> <span>people</span></div>
+          <div style="margin-top:8px"><div class="pred-trend" id="mTrendChip"><i class="fa-solid fa-minus"></i> Stable trend</div></div>
+        </div>
+        <div class="pred-right">
+          <label>Predict ahead</label>
+          <select id="modalPredSelect"><option value="1">In 1 minute</option><option value="5" selected>In 5 minutes</option><option value="10">In 10 minutes</option><option value="15">In 15 minutes</option></select>
+          <div style="font-size:.68rem;color:rgba(255,255,255,.28);line-height:1.5;text-align:right">Based on live trend<br>since session start</div>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="modal-chart-section">
+        <div class="modal-chart-title"><i class="fa-solid fa-chart-area" style="color:var(--indigo)"></i> People over time — <span id="modalChartCamName" style="color:var(--ink3);font-style:italic;font-weight:400"></span></div>
+        <div class="modal-chart-wrap"><canvas id="modalChart"></canvas></div>
+      </div>
+
+      <!-- Clusters -->
+      <div class="cluster-row">
+        <div class="clust-item"><div class="clust-lbl">Groups found</div><div class="clust-val" id="mClusters">0</div></div>
+        <div class="clust-item"><div class="clust-lbl">Largest group</div><div class="clust-val" id="mLargest">0</div></div>
+        <div class="clust-item"><div class="clust-lbl">Area congestion</div><div class="clust-val" id="mCong">0%</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════ ADD CAMERA MODAL ════════════════════ -->
+<div id="addModal" class="add-modal-bg hidden">
+  <div class="add-modal">
+    <div class="add-modal-h">Add a camera</div>
+    <div class="add-modal-sub">Give it a clear name — it shows up in alerts so you know exactly where to look.</div>
+    <div class="field"><label class="lbl">Camera name</label><input id="mName" class="inp" placeholder="e.g. Main Entrance, Food Court, Gate B"/><p class="fnote">A descriptive name makes alerts much easier to act on.</p></div>
+    <div class="field"><label class="lbl">Source type</label>
+      <div class="type-row">
+        <div class="tcard on" data-t="youtube"><i class="fa-brands fa-youtube"></i><span>YouTube</span></div>
+        <div class="tcard" data-t="webcam"><i class="fa-solid fa-camera"></i><span>Webcam</span></div>
+        <div class="tcard" data-t="rtsp"><i class="fa-solid fa-network-wired"></i><span>RTSP</span></div>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:6px"><label class="lbl" id="mSrcLbl">YouTube link</label><input id="mUrl" class="inp" placeholder="Paste YouTube URL here"/><p class="fnote" id="mSrcHint">Paste the full URL of a YouTube live stream.</p></div>
+    <div class="field" style="margin-bottom:0"><label class="lbl">Alert threshold</label><div style="position:relative"><input id="mThresh" type="number" class="inp" value="10" min="1" style="padding-right:54px"/><span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:.74rem;font-weight:600;color:var(--ink4)">people</span></div></div>
+    <div id="mMsg" class="fmsg" style="margin-top:9px"></div>
+    <div class="add-modal-foot"><button class="btn btn-outline" id="mCancel">Cancel</button><button class="btn btn-indigo" id="mConfirm"><i class="fa-solid fa-plus"></i> Add camera</button></div>
+  </div>
+</div>
+
+<script>
+// ─── CONFIG ────────────────────────────────────────────────────────────────
+const SUPABASE_URL="https://xcslmtmhsrwhqrysjxcz.supabase.co";
+const SUPABASE_ANON_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhjc2xtdG1oc3J3aHFyeXNqeGN6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk2MTExMTIsImV4cCI6MjA4NTE4NzExMn0.q9aZNvjUsg8wZUXNNSEMQHzhsVxuxaS44tbPYFsSqC8";
+const API="http://127.0.0.1:8000";
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+
+let authMode="login",socket=null,heatmapOn=false,trainTimer=null;
+let cameras=[],sessionPeak=0,alertDismissed=false,mType="youtube",openCamId=null;
+let modalChartInst=null;
+let primarySent=false; // tracks if primary camera was sent to backend already
+
+const srcInfo={
+  youtube:{lbl:"YouTube link",ph:"Paste YouTube URL here",hint:"Full URL of a YouTube live stream."},
+  webcam:{lbl:"Device number",ph:"0 for default webcam",hint:"0 = default webcam, 1 = second camera, etc."},
+  rtsp:{lbl:"RTSP address",ph:"rtsp://user:pass@ip:554/stream",hint:"Full RTSP URL of your IP camera."}
+};
+
+// ─── ROUTING ───────────────────────────────────────────────────────────────
+const P={home:"pageHome",auth:"pageAuth",setup:"pageSetup",dash:"pageDash"};
+function go(p){Object.values(P).forEach(id=>document.getElementById(id).classList.add("hidden"));document.getElementById(P[p]).classList.remove("hidden");scrollTo(0,0)}
+
+// ─── HOME ──────────────────────────────────────────────────────────────────
+["h-signin","h-start","h-start2","cta-start"].forEach(id=>{const el=document.getElementById(id);if(el)el.onclick=()=>go("auth")});
+["navLogo","navLogoAuth","navLogoSetup","navLogoDash"].forEach(id=>{const el=document.getElementById(id);if(el)el.onclick=()=>go("home")});
+document.getElementById("a-back").onclick=()=>go("home");
+
+// ─── AUTH ──────────────────────────────────────────────────────────────────
+const tL=document.getElementById("tabLogin"),tS=document.getElementById("tabSignup");
+tL.onclick=()=>{authMode="login";tL.classList.add("on");tS.classList.remove("on");document.getElementById("btnAuth").textContent="Sign in";document.getElementById("authMsg").textContent=""};
+tS.onclick=()=>{authMode="signup";tS.classList.add("on");tL.classList.remove("on");document.getElementById("btnAuth").textContent="Create account";document.getElementById("authMsg").textContent=""};
+document.getElementById("btnAuth").onclick=async()=>{
+  const email=document.getElementById("authEmail").value.trim();
+  const pass=document.getElementById("authPass").value.trim();
+  const msg=document.getElementById("authMsg");
+  msg.className="fmsg";msg.textContent="Just a moment…";
+  if(!email||!pass){msg.className="fmsg err";msg.textContent="Please fill in both fields.";return}
+  const r=authMode==="signup"?await sb.auth.signUp({email,password:pass}):await sb.auth.signInWithPassword({email,password:pass});
+  if(r.error){msg.className="fmsg err";msg.textContent=r.error.message}
+  else if(authMode==="signup"){msg.className="fmsg ok";msg.textContent="Account created! Sign in now.";tL.click()}
+  else{msg.className="fmsg ok";msg.textContent="Signed in.";document.getElementById("userLbl").textContent=email;await loadCfg();loadCamerasFromStorage();go("setup")}
+};
+
+// ─── API ───────────────────────────────────────────────────────────────────
+async function api(path,method="GET",body=null){
+  const{data}=await sb.auth.getSession();
+  const h={"Content-Type":"application/json"};
+  if(data?.session)h.Authorization="Bearer "+data.session.access_token;
+  const r=await fetch(API+path,{method,headers:h,body:body?JSON.stringify(body):null});
+  if(!r.ok)throw new Error("API error");return r.json();
+}
+async function logout(){
+  try{await sb.auth.signOut()}catch(e){}
+  if(socket){socket.disconnect();socket=null}
+  if(trainTimer)clearInterval(trainTimer);
+  cameras=[];sessionPeak=0;alertDismissed=false;primarySent=false;
+  clearCamerasFromStorage(); // wipe stored cameras on full logout
+  go("home");
+}
+document.getElementById("s-logout").onclick=logout;
+document.getElementById("d-logout").onclick=logout;
+async function loadCfg(){
+  try{const c=await api("/config");if(c.threshold)document.getElementById("thresholdValue").value=c.threshold;if(typeof c.heatmap==="boolean"){heatmapOn=c.heatmap;updateHeatmapBtn()}}catch(e){}
+}
+
+// ─── CAMERA PERSISTENCE ────────────────────────────────────────────────────
+// Cameras are saved to localStorage so they survive logout/login.
+// backendActive is reset to false on load so they get re-sent to backend.
+function saveCamerasToStorage(){
+  try{
+    const toSave=cameras.map(c=>({
+      id:c.id,name:c.name,type:c.type,url:c.url,threshold:c.threshold
+    }));
+    localStorage.setItem("auraview_cameras",JSON.stringify(toSave));
+  }catch(e){}
+}
+
+function loadCamerasFromStorage(){
+  try{
+    const raw=localStorage.getItem("auraview_cameras");
+    if(!raw)return;
+    const saved=JSON.parse(raw);
+    if(!Array.isArray(saved)||!saved.length)return;
+    cameras=saved.map(c=>({
+      ...c,
+      count:0,trend:0,status:"SAFE",peak:0,sum:0,n:0,
+      history:[],clusterCount:0,largestCluster:0,
+      congestion:0,riskScore:0,backendActive:false
+    }));
+    primarySent=false;
+    renderSetup();
+    // Clear any stale "add at least one camera" error
+    const msg=document.getElementById("setupMsg");
+    if(msg){msg.textContent="";msg.className="fmsg"}
+  }catch(e){}
+}
+
+function clearCamerasFromStorage(){
+  try{localStorage.removeItem("auraview_cameras")}catch(e){}
+}
+
+// ─── SETUP ─────────────────────────────────────────────────────────────────
+document.getElementById("btnApply").onclick=async()=>{
+  const thresh=parseInt(document.getElementById("thresholdValue").value||"10");
+  const ms=parseInt(document.getElementById("trainIntervalValue").value||"120000");
+  const msg=document.getElementById("setupMsg");
+  if(!cameras.length){msg.className="fmsg err";msg.textContent="Add at least one camera first.";return}
+  msg.className="fmsg";msg.textContent="Starting up…";
+  try{
+    await api("/set_threshold","POST",{threshold:thresh});
+    for(let i=0;i<cameras.length;i++){
+      const c=cameras[i];
+      if(!c.backendActive){
+        // Only send to backend if not already running
+        if(!primarySent){
+          await api("/set_source","POST",{id:c.id,name:c.name,type:c.type,value:c.url,threshold:c.threshold});
+          primarySent=true;
+        } else {
+          await api("/add_camera","POST",{id:c.id,name:c.name,type:c.type,value:c.url,threshold:c.threshold});
+        }
+        c.backendActive=true;
+      }
+    }
+    msg.className="fmsg ok";msg.textContent="Started!";
+    saveCamerasToStorage();  // persist so they survive logout/re-login
+    go("dash");renderCards();updateSummary();
+    if(!socket||!socket.connected) connectSocket();
+    if(trainTimer)clearInterval(trainTimer);
+    trainTimer=setInterval(()=>{
+      if(socket&&socket.connected){
+        api("/train_model","POST",{}).then(()=>{
+          const t=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"});
+          const el=document.getElementById("opsLastSync");if(el)el.textContent=t;
+        }).catch(()=>{});
+      }
+    },ms);
+    sessionStart=Date.now();
+  }catch(e){msg.className="fmsg err";msg.textContent="Couldn't connect — is the backend running?"}
+};
+// Going back to setup from dashboard: keep socket alive, keep cameras, just switch page
+document.getElementById("btnSettings").onclick=()=>{
+  renderSetup();
+  // Clear any stale error message so loaded cameras don't show the old error
+  const msg=document.getElementById("setupMsg");
+  msg.textContent="";msg.className="fmsg";
+  go("setup");
+};
+
+// ─── HEATMAP ───────────────────────────────────────────────────────────────
+function updateHeatmapBtn(){
+  const b=document.getElementById("btnHeatmap");
+  if(heatmapOn){b.style.color="var(--indigo)";b.style.borderColor="rgba(67,56,202,.35)";b.innerHTML='<i class="fa-solid fa-fire" style="color:var(--indigo)"></i> Heatmap on'}
+  else{b.style.color="";b.style.borderColor="";b.innerHTML='<i class="fa-solid fa-fire"></i> Heatmap'}
+}
+document.getElementById("btnHeatmap").onclick=async()=>{
+  heatmapOn=!heatmapOn;updateHeatmapBtn();
+  await api("/set_heatmap","POST",{enabled:heatmapOn});
+  document.querySelectorAll(".cfeed img").forEach(img=>img.src="/video_feed?cam="+img.dataset.cid+"&ts="+Date.now());
+  if(openCamId){const img=document.getElementById("modalFeedImg");if(img)img.src="/video_feed?cam="+openCamId+"&ts="+Date.now()}
+};
+document.getElementById("btnFS").onclick=()=>{if(!document.fullscreenElement)document.documentElement.requestFullscreen();else document.exitFullscreen()};
+document.getElementById("closeAlert").onclick=()=>{document.getElementById("alertBar").classList.add("gone");alertDismissed=true};
+
+// ─── ALERT DRAWER SYSTEM ───────────────────────────────────────────────────
+let drawerOpen=false;
+let totalAlertsFired=0;
+let sessionMaxRisk=0;
+let activityFeed=[];   // all events for activity panel
+let drawerLog=[];      // alert history for drawer
+let activeAlerts={};   // {camId: {cam,count,time}} currently in DANGER
+let sessionStart=Date.now();
+
+// Uptime counter
+setInterval(()=>{
+  const secs=Math.floor((Date.now()-sessionStart)/1000);
+  const m=String(Math.floor(secs/60)).padStart(2,'0');
+  const s=String(secs%60).padStart(2,'0');
+  const el=document.getElementById("opsUptime");if(el)el.textContent=m+":"+s;
+},1000);
+
+function openAlertDrawer(){
+  document.getElementById("alertDrawerBg").classList.remove("hidden");
+  const d=document.getElementById("alertDrawer");
+  d.classList.remove("hidden");d.classList.remove("closing");
+  drawerOpen=true;
+}
+function closeAlertDrawer(){
+  const d=document.getElementById("alertDrawer");
+  d.classList.add("closing");
+  setTimeout(()=>{
+    d.classList.add("hidden");
+    document.getElementById("alertDrawerBg").classList.add("hidden");
+  },260);
+  drawerOpen=false;
+}
+document.getElementById("alertBellBtn").onclick=()=>{drawerOpen?closeAlertDrawer():openAlertDrawer()};
+document.getElementById("drawerClose").onclick=closeAlertDrawer;
+document.getElementById("drawerClearBtn").onclick=()=>{
+  drawerLog=[];renderDrawerLog();
+  updateBellBadge();
+};
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&drawerOpen)closeAlertDrawer()});
+
+function updateBellBadge(){
+  const dangerCount=Object.keys(activeAlerts).length;
+  const badge=document.getElementById("alertBadge");
+  const btn=document.getElementById("alertBellBtn");
+  const lbl=document.getElementById("alertBellLabel");
+  if(dangerCount>0){
+    badge.textContent=dangerCount;badge.classList.remove("hidden-badge");
+    btn.classList.add("has-alert");
+    lbl.textContent=dangerCount+" Alert"+(dangerCount>1?"s":"");
+  } else {
+    badge.classList.add("hidden-badge");
+    btn.classList.remove("has-alert");
+    lbl.textContent="Alerts";
+  }
+  document.getElementById("opsTotalAlerts").textContent=totalAlertsFired;
+}
+
+function renderActiveAlerts(){
+  const el=document.getElementById("drawerActiveAlerts");
+  const keys=Object.keys(activeAlerts);
+  if(!keys.length){el.innerHTML='<div class="no-active-alerts"><i class="fa-solid fa-shield-check" style="margin-right:6px;color:var(--green)"></i>No active alerts — all cameras are safe.</div>';return}
+  el.innerHTML=keys.map(id=>{
+    const a=activeAlerts[id];
+    return`<div class="active-alert-item">
+      <div class="aai-dot"></div>
+      <div class="aai-body">
+        <div class="aai-cam">${a.cam.name}</div>
+        <div class="aai-msg">${a.count} people — limit ${a.cam.threshold}</div>
+        <div class="aai-time">${a.time}</div>
+      </div>
+      <div class="aai-view" onclick="openCamModal('${id}');closeAlertDrawer()">View</div>
+    </div>`;
+  }).join("");
+}
+
+function renderDrawerLog(){
+  const el=document.getElementById("drawerLog");
+  if(!drawerLog.length){
+    el.innerHTML='<div class="log-empty-state"><i class="fa-regular fa-bell-slash"></i><p>No alerts yet.<br>Everything is quiet.</p></div>';
+    return;
+  }
+  el.innerHTML=drawerLog.map(e=>`
+    <div class="log-entry ${e.cls}">
+      <i class="fa-solid ${e.icon} le-icon"></i>
+      <div><div class="le-txt">${e.msg}</div><div class="le-time">${e.time}</div></div>
+    </div>`).join("");
+}
+
+// Only called for DANGER start and DANGER resolved — nothing else
+function pushAlertLog(cam, count, time){
+  const resolved = count === null;
+  const entry = resolved
+    ? {cls:"le-ok",  icon:"fa-circle-check",     msg:`All clear — <strong>${cam.name}</strong> crowd back within limit`, time}
+    : {cls:"le-crit",icon:"fa-triangle-exclamation",msg:`Crowd alert — <strong>${cam.name}</strong>: ${count} people (limit ${cam.threshold})`, time};
+  drawerLog.unshift(entry);
+  if(drawerLog.length>50) drawerLog.pop();
+  renderDrawerLog();
+  // Also update activity panel with the same alert-only entries
+  pushActivityEntry(entry);
+}
+
+function pushActivityEntry(entry){
+  activityFeed.unshift(entry);
+  if(activityFeed.length>50) activityFeed.pop();
+  const feed=document.getElementById("apFeed");
+  if(!feed)return;
+  const count=activityFeed.length;
+  document.getElementById("apCount").textContent=count+" alert"+(count!==1?"s":"");
+  feed.innerHTML=activityFeed.map(a=>`
+    <div class="ap-item">
+      <div class="ap-item-icon ${a.cls==="le-crit"?"ap-icon-crit":"ap-icon-safe"}">
+        <i class="fa-solid ${a.icon}"></i>
+      </div>
+      <div class="ap-body">
+        <div class="ap-msg">${a.msg}</div>
+        <div class="ap-time">${a.time}</div>
+      </div>
+    </div>`).join("");
+}
+
+// ─── SETUP CAM LIST ────────────────────────────────────────────────────────
+function renderSetup(){
+  const list=document.getElementById("setupList");
+  document.getElementById("camCntLbl").textContent=cameras.length+" camera"+(cameras.length!==1?"s":"")+" added";
+  if(!cameras.length){list.innerHTML=`<div style="text-align:center;padding:26px 10px;color:var(--ink4)"><i class="fa-solid fa-video-slash" style="font-size:1.5rem;opacity:.22;display:block;margin-bottom:9px"></i><p style="font-size:.78rem;line-height:1.6">No cameras yet.<br>Add your first one below.</p></div>`;return}
+  list.innerHTML=cameras.map(c=>`<div class="cam-row"><div class="cam-row-icon"><i class="fa-solid fa-video"></i></div><div class="cam-row-info"><div class="cam-row-name">${c.name}</div><div class="cam-row-src">${c.type.toUpperCase()} — ${c.url}</div></div><button class="cam-row-del" onclick="delCam('${c.id}')"><i class="fa-solid fa-trash-can"></i></button></div>`).join("");
+}
+function delCam(id){
+  const cam=cameras.find(c=>c.id===id);
+  const wasFirst=cameras.indexOf(cam)===0;
+  cameras=cameras.filter(c=>c.id!==id);
+  saveCamerasToStorage();
+  renderSetup();
+  if(cam&&cam.backendActive){
+    api("/camera/"+id,"DELETE").catch(()=>{});
+    if(wasFirst) primarySent=false;
+  }
+  if(!document.getElementById("pageDash").classList.contains("hidden")){renderCards();updateSummary()}
+}
+
+// ─── ADD CAM MODAL ─────────────────────────────────────────────────────────
+const addModal=document.getElementById("addModal");
+function openAddModal(){
+  document.getElementById("mName").value="";document.getElementById("mUrl").value="";
+  document.getElementById("mThresh").value=document.getElementById("thresholdValue")?.value||"10";
+  document.getElementById("mMsg").textContent="";
+  mType="youtube";
+  document.querySelectorAll(".tcard").forEach(c=>c.classList.remove("on"));
+  document.querySelector('[data-t="youtube"]').classList.add("on");
+  document.getElementById("mSrcLbl").textContent=srcInfo.youtube.lbl;
+  document.getElementById("mUrl").placeholder=srcInfo.youtube.ph;
+  document.getElementById("mSrcHint").textContent=srcInfo.youtube.hint;
+  addModal.classList.remove("hidden");
+}
+document.getElementById("openAdd").onclick=openAddModal;
+document.getElementById("dashAddCam").onclick=openAddModal;
+document.getElementById("mCancel").onclick=()=>addModal.classList.add("hidden");
+addModal.addEventListener("click",e=>{if(e.target===addModal)addModal.classList.add("hidden")});
+document.querySelectorAll(".tcard").forEach(c=>{
+  c.onclick=()=>{
+    document.querySelectorAll(".tcard").forEach(x=>x.classList.remove("on"));c.classList.add("on");
+    mType=c.dataset.t;const i=srcInfo[mType];
+    document.getElementById("mSrcLbl").textContent=i.lbl;document.getElementById("mUrl").placeholder=i.ph;document.getElementById("mSrcHint").textContent=i.hint;
+  };
+});
+document.getElementById("mConfirm").onclick=async()=>{
+  const name=document.getElementById("mName").value.trim()||("Camera "+(cameras.length+1));
+  const url=document.getElementById("mUrl").value.trim();
+  const thresh=parseInt(document.getElementById("mThresh").value||"10");
+  const mmsg=document.getElementById("mMsg");
+  if(!url){mmsg.className="fmsg err";mmsg.textContent="Please enter a URL or device number.";return}
+  const cam={id:"cam_"+Date.now(),name,type:mType,url,threshold:thresh,count:0,trend:0,status:"SAFE",peak:0,sum:0,n:0,history:[],clusterCount:0,largestCluster:0,congestion:0,riskScore:0,backendActive:false};
+  cameras.push(cam);addModal.classList.add("hidden");renderSetup();
+  saveCamerasToStorage(); // persist immediately so re-login remembers this camera
+  if(!document.getElementById("pageDash").classList.contains("hidden")){
+    try{await api("/add_camera","POST",{id:cam.id,name,type:mType,value:url,threshold:thresh});cam.backendActive=true;}catch(e){}
+    renderCards();updateSummary();
+    pushActivity("info",`Camera added: <strong>${name}</strong>`);
+    pushDrawerLog("info",`Camera added: ${name}`);
+  }
+};
+
+// ─── CAMERA CARDS ──────────────────────────────────────────────────────────
+function sc(s){return s==="DANGER"?"crit":s==="MODERATE"?"warn":"safe"}
+function riskClass(r){return r>=70?"risk-high":r>=40?"risk-mid":"risk-low"}
+
+function renderCards(){
+  const g=document.getElementById("camsGrid");
+  document.getElementById("liveCnt").textContent=cameras.length;
+  document.getElementById("svCamCount").textContent=cameras.length;
+  document.getElementById("svCams").textContent="across "+cameras.length+" camera"+(cameras.length!==1?"s":"");
+  if(!cameras.length){g.innerHTML=`<div style="grid-column:1/-1;text-align:center;padding:48px;color:var(--ink4)"><i class="fa-solid fa-video-slash" style="font-size:1.8rem;opacity:.2;display:block;margin-bottom:12px"></i>No cameras added yet.</div>`;return}
+  g.innerHTML=cameras.map(c=>buildCard(c)).join("");
+}
+
+function buildCard(c){
+  const s=sc(c.status);
+  const pct=Math.min(100,Math.round((c.count/Math.max(1,c.threshold))*100));
+  const bar=s==="crit"?"var(--red)":s==="warn"?"var(--amber)":"var(--indigo)";
+  const fb=s==="crit"?"fb-crit":s==="warn"?"fb-warn":"fb-safe";
+  const ti=c.trend>0.5?"fa-arrow-trend-up":c.trend<-.5?"fa-arrow-trend-down":"fa-minus";
+  const tc=c.trend>0.5?"tp-up":c.trend<-.5?"tp-dn":"tp-fl";
+  const tl=c.trend>0.5?"+"+c.trend.toFixed(1)+"/min":c.trend<-.5?c.trend.toFixed(1)+"/min":"Stable";
+  const pred5=Math.max(0,Math.round(c.count+(c.trend*5)));
+  const rc=riskClass(c.riskScore);
+  return`<div class="cam-card ${s==="crit"?"crit":s==="warn"?"warn":""}" id="cc_${c.id}">
+    <div class="cam-click-hint" onclick="openCamModal('${c.id}')"><span><i class="fa-solid fa-chart-line"></i> View analysis</span></div>
+    <div class="cfeed" onclick="openCamModal('${c.id}')">
+      <img data-cid="${c.id}" src="/video_feed?cam=${c.id}&ts=${Date.now()}" alt="${c.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+      <div class="cfeed-ph" style="display:none"><i class="fa-solid fa-video-slash"></i><span>No feed</span></div>
+      <div class="fov">
+        <div class="fov-top">
+          <span class="fbadge fb-live"><i class="fa-solid fa-circle" style="font-size:.38rem"></i> Live</span>
+          <div style="display:flex;gap:4px;flex-direction:column;align-items:flex-end">
+            <span class="fbadge ${fb}" id="fb_${c.id}">${c.status}</span>
+            <span class="risk-badge ${rc}" id="rb_${c.id}"><i class="fa-solid fa-gauge-simple-high" style="font-size:.55rem"></i> Risk: ${c.riskScore}</span>
+          </div>
+        </div>
+        <div class="fov-bot">
+          <div class="fcount" id="fc_${c.id}">${c.count}<small>people in frame</small></div>
+          <div class="fmini">
+            <span class="fmini-chip ${c.trend>0.5?"up":c.trend<-.5?"dn":""}" id="ftrend_${c.id}"><i class="fa-solid ${ti}"></i> ${tl}</span>
+            <span class="fmini-chip pred" id="fpred_${c.id}"><i class="fa-solid fa-arrow-right"></i> ~${pred5} in 5 min</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="cinfo">
+      <div style="cursor:pointer;flex:1" onclick="openCamModal('${c.id}')">
+        <div class="cname">${c.name}</div>
+        <div class="csrc">${c.type.toUpperCase()} · Limit: ${c.threshold}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div class="trend-pill ${tc}" id="tp_${c.id}"><i class="fa-solid ${ti}"></i> ${tl}</div>
+        <button class="cam-remove-btn" title="Remove camera" onclick="event.stopPropagation();showRemoveConfirm('${c.id}')">
+          <i class="fa-solid fa-trash-can"></i>
+        </button>
+      </div>
+    </div>
+    <div class="cbar-wrap">
+      <div class="cbar-labels"><span>Capacity used</span><strong id="cp_${c.id}">${pct}%</strong></div>
+      <div class="cbar-track"><div class="cbar-fill" id="cf_${c.id}" style="width:${pct}%;background:${bar}"></div></div>
+    </div>
+  </div>`;
+}
+
+function patchCard(cam){
+  const s=sc(cam.status),pct=Math.min(100,Math.round((cam.count/Math.max(1,cam.threshold))*100));
+  const bar=s==="crit"?"var(--red)":s==="warn"?"var(--amber)":"var(--indigo)";
+  const fb=s==="crit"?"fb-crit":s==="warn"?"fb-warn":"fb-safe";
+  const ti=cam.trend>0.5?"fa-arrow-trend-up":cam.trend<-.5?"fa-arrow-trend-down":"fa-minus";
+  const tc=cam.trend>0.5?"tp-up":cam.trend<-.5?"tp-dn":"tp-fl";
+  const tl=cam.trend>0.5?"+"+cam.trend.toFixed(1)+"/min":cam.trend<-.5?cam.trend.toFixed(1)+"/min":"Stable";
+  const pred5=Math.max(0,Math.round(cam.count+(cam.trend*5)));
+  const rc=riskClass(cam.riskScore);
+  const cc=document.getElementById("cc_"+cam.id);if(!cc)return;
+  cc.classList.toggle("crit",s==="crit");cc.classList.toggle("warn",s==="warn"&&s!=="crit");
+  const fbe=document.getElementById("fb_"+cam.id);if(fbe){fbe.textContent=cam.status;fbe.className="fbadge "+fb}
+  const rbe=document.getElementById("rb_"+cam.id);if(rbe){rbe.className=`risk-badge ${rc}`;rbe.innerHTML=`<i class="fa-solid fa-gauge-simple-high" style="font-size:.55rem"></i> Risk: ${cam.riskScore}`}
+  const fce=document.getElementById("fc_"+cam.id);if(fce)fce.innerHTML=cam.count+"<small>people in frame</small>";
+  const cfe=document.getElementById("cf_"+cam.id);if(cfe){cfe.style.width=pct+"%";cfe.style.background=bar}
+  const cpe=document.getElementById("cp_"+cam.id);if(cpe)cpe.textContent=pct+"%";
+  const ftr=document.getElementById("ftrend_"+cam.id);if(ftr){ftr.className="fmini-chip "+(cam.trend>0.5?"up":cam.trend<-.5?"dn":"");ftr.innerHTML=`<i class="fa-solid ${ti}"></i> ${tl}`}
+  const fpr=document.getElementById("fpred_"+cam.id);if(fpr)fpr.innerHTML=`<i class="fa-solid fa-arrow-right"></i> ~${pred5} in 5 min`;
+  const tpe=document.getElementById("tp_"+cam.id);if(tpe){tpe.className="trend-pill "+tc;tpe.innerHTML=`<i class="fa-solid ${ti}"></i> ${tl}`}
+}
+
+// ─── REMOVE CAMERA FROM DASHBOARD ────────────────────────────────────────
+function showRemoveConfirm(id){
+  const cam=cameras.find(c=>c.id===id);
+  if(!cam)return;
+  const card=document.getElementById("cc_"+id);
+  if(!card)return;
+  // Don't show twice
+  if(card.querySelector(".cam-confirm-overlay"))return;
+  const overlay=document.createElement("div");
+  overlay.className="cam-confirm-overlay";
+  overlay.id="confirm_"+id;
+  overlay.innerHTML=`
+    <div class="co-icon"><i class="fa-solid fa-trash-can"></i></div>
+    <div class="co-msg">Remove "${cam.name}"?</div>
+    <div class="co-sub">This stops the feed and removes it from your dashboard.</div>
+    <div class="co-btns">
+      <button class="co-btn-cancel" onclick="cancelRemoveConfirm('${id}')">Keep it</button>
+      <button class="co-btn-remove" onclick="removeCamFromDash('${id}')"><i class="fa-solid fa-trash-can"></i> Remove</button>
+    </div>
+  `;
+  card.appendChild(overlay);
+}
+
+function cancelRemoveConfirm(id){
+  const overlay=document.getElementById("confirm_"+id);
+  if(overlay)overlay.remove();
+}
+
+async function removeCamFromDash(id){
+  const cam=cameras.find(c=>c.id===id);
+  if(!cam)return;
+  const wasFirst=cameras.indexOf(cam)===0;
+  // Animate card out
+  const card=document.getElementById("cc_"+id);
+  if(card){
+    card.style.transition="all .28s ease";
+    card.style.opacity="0";
+    card.style.transform="scale(0.93)";
+    card.style.pointerEvents="none";
+  }
+  // Remove from backend
+  if(cam.backendActive){
+    api("/camera/"+id,"DELETE").catch(()=>{});
+    if(wasFirst) primarySent=false;
+  }
+  // Remove from active alerts
+  delete activeAlerts[id];
+  updateBellBadge();
+  renderActiveAlerts();
+  // Remove from cameras array after animation
+  setTimeout(()=>{
+    cameras=cameras.filter(c=>c.id!==id);
+    saveCamerasToStorage(); // update persisted list
+    renderCards();
+    updateSummary();
+    renderSetup();
+    pushActivity("info",`Camera removed: <strong>${cam.name}</strong>`);
+    pushDrawerLog("info",`Camera removed: ${cam.name}`);
+  },300);
+}
+let prevStatuses={};
+function updateSummary(){
+  const total=cameras.reduce((a,c)=>a+c.count,0);
+  sessionPeak=Math.max(sessionPeak,total);
+  document.getElementById("svTotal").textContent=total;document.getElementById("svPeak").textContent=sessionPeak;
+  const hasDanger=cameras.some(c=>c.status==="DANGER");
+  const hasMod=cameras.some(c=>c.status==="MODERATE");
+  const os=document.getElementById("svStatus");
+  if(hasDanger)os.innerHTML='<span class="spill sp-dn"><span class="sdot"></span>Action needed</span>';
+  else if(hasMod)os.innerHTML='<span class="spill sp-wn"><span class="sdot"></span>Heads up</span>';
+  else os.innerHTML='<span class="spill sp-ok"><span class="sdot"></span>All clear</span>';
+  // Alert bar — only DANGER cameras, concise
+  const dangerCams=cameras.filter(c=>c.status==="DANGER");
+  const bar=document.getElementById("alertBar");
+  if(dangerCams.length&&!alertDismissed){
+    bar.classList.remove("gone");
+    document.getElementById("alertBarMsgs").innerHTML=dangerCams.map(c=>`<span class="alert-bar-msg"><i class="fa-solid fa-location-dot"></i> <strong>${c.name}</strong> — ${c.count} people</span>`).join("");
+  }else if(!dangerCams.length){bar.classList.add("gone");alertDismissed=false}
+}
+
+// ─── CAMERA DETAIL MODAL ───────────────────────────────────────────────────
+const camModal=document.getElementById("camModal");
+function openCamModal(id){
+  const cam=cameras.find(c=>c.id===id);if(!cam)return;
+  openCamId=id;
+  document.getElementById("modalFeedImg").src="/video_feed?cam="+id+"&ts="+Date.now();
+  document.getElementById("modalCamName").textContent=cam.name;
+  document.getElementById("modalCamSrc").textContent=cam.type.toUpperCase()+" — "+cam.url+" · Limit: "+cam.threshold+" people";
+  document.getElementById("modalChartCamName").textContent=cam.name;
+  refreshModalData(cam);buildModalChart(cam);
+  camModal.classList.remove("hidden");document.body.style.overflow="hidden";
+}
+function closeModal(){camModal.classList.add("hidden");document.body.style.overflow="";openCamId=null;if(modalChartInst){modalChartInst.destroy();modalChartInst=null}}
+document.getElementById("modalClose").onclick=closeModal;
+camModal.addEventListener("click",e=>{if(e.target===camModal)closeModal()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openCamId)closeModal()});
+
+function refreshModalData(cam){
+  const s=sc(cam.status);
+  const sb2=document.getElementById("modalStatusBadge");
+  sb2.textContent=cam.status;sb2.className="fbadge "+(s==="crit"?"fb-crit":s==="warn"?"fb-warn":"fb-safe");
+  const sp=document.getElementById("modalStatusPill");
+  if(s==="crit")sp.innerHTML='<span class="spill sp-dn"><span class="sdot"></span>Action needed</span>';
+  else if(s==="warn")sp.innerHTML='<span class="spill sp-wn"><span class="sdot"></span>Heads up</span>';
+  else sp.innerHTML='<span class="spill sp-ok"><span class="sdot"></span>All clear</span>';
+  document.getElementById("modalCount").textContent=cam.count;
+  document.getElementById("mCount").textContent=cam.count;
+  document.getElementById("mPeak").textContent=cam.peak||0;
+  document.getElementById("mAvg").textContent=cam.n>0?Math.round(cam.sum/cam.n):0;
+  document.getElementById("mRiskVal").textContent=cam.riskScore||0;
+  document.getElementById("mClusters").textContent=cam.clusterCount||0;
+  document.getElementById("mLargest").textContent=cam.largestCluster||0;
+  document.getElementById("mCong").textContent=Math.round((cam.congestion||0)*100)+"%";
+  updateRiskMeter(cam.riskScore||0);
+  updateModalPred(cam);
+}
+
+function updateRiskMeter(risk){
+  const circumference=188.5;
+  const offset=circumference-(risk/100)*circumference;
+  const arc=document.getElementById("riskArc");
+  const num=document.getElementById("riskDialNum");
+  const desc=document.getElementById("riskDesc");
+  const label=document.getElementById("riskLabel");
+  if(arc){
+    arc.style.strokeDashoffset=offset;
+    arc.style.stroke=risk>=70?"var(--red)":risk>=40?"var(--amber)":"var(--green)";
+  }
+  if(num){num.textContent=risk;num.style.color=risk>=70?"var(--red)":risk>=40?"var(--amber)":"var(--green)"}
+  if(desc){
+    if(risk>=70)desc.textContent="High risk detected. Crowd density, clustering, or congestion is significantly elevated. Immediate attention recommended.";
+    else if(risk>=40)desc.textContent="Moderate risk. Crowd is building and may require monitoring. Consider crowd management action.";
+    else desc.textContent="This camera is within safe operating limits. Crowd density, clustering, and congestion are all normal.";
+  }
+  if(label){
+    if(risk>=70){label.innerHTML='<i class="fa-solid fa-triangle-exclamation"></i> High Risk';label.style.background="var(--red-dim)";label.style.color="var(--red)"}
+    else if(risk>=40){label.innerHTML='<i class="fa-solid fa-circle-exclamation"></i> Moderate Risk';label.style.background="var(--amber-dim)";label.style.color="var(--amber)"}
+    else{label.innerHTML='<i class="fa-solid fa-shield-check"></i> Low Risk';label.style.background="var(--green-dim)";label.style.color="var(--green)"}
+  }
+}
+
+function updateModalPred(cam){
+  const mins=parseInt(document.getElementById("modalPredSelect").value);
+  const pred=Math.max(0,Math.round(cam.count+(cam.trend*mins)));
+  document.getElementById("mPredVal").textContent=pred;
+  const chip=document.getElementById("mTrendChip");
+  if(cam.trend>0.5){chip.className="pred-trend up";chip.innerHTML=`<i class="fa-solid fa-arrow-trend-up"></i> +${cam.trend.toFixed(1)}/min — rising`}
+  else if(cam.trend<-.5){chip.className="pred-trend dn";chip.innerHTML=`<i class="fa-solid fa-arrow-trend-down"></i> ${cam.trend.toFixed(1)}/min — dispersing`}
+  else{chip.className="pred-trend";chip.innerHTML=`<i class="fa-solid fa-minus"></i> Stable trend`}
+}
+document.getElementById("modalPredSelect").addEventListener("change",()=>{const cam=cameras.find(c=>c.id===openCamId);if(cam)updateModalPred(cam)});
+
+function buildModalChart(cam){
+  if(modalChartInst){modalChartInst.destroy();modalChartInst=null}
+  const ctx=document.getElementById("modalChart").getContext("2d");
+  const grad=ctx.createLinearGradient(0,0,0,180);
+  grad.addColorStop(0,"rgba(67,56,202,.18)");grad.addColorStop(1,"rgba(67,56,202,0)");
+  const hist=cam.history||[];
+  modalChartInst=new Chart(ctx,{
+    type:"line",
+    data:{labels:hist.map(h=>h.t),datasets:[{label:"People",data:hist.map(h=>h.c),borderColor:"#4338CA",backgroundColor:grad,fill:true,tension:.42,pointRadius:0,borderWidth:2.5}]},
+    options:{responsive:true,maintainAspectRatio:false,
+      scales:{y:{beginAtZero:true,grid:{color:"rgba(0,0,0,0.05)"},ticks:{color:"#A09A90",font:{family:"'Plus Jakarta Sans'",size:10}}},x:{grid:{display:false},ticks:{color:"#A09A90",font:{family:"'Plus Jakarta Sans'",size:10},maxRotation:0,maxTicksLimit:8}}},
+      plugins:{legend:{display:false}},animation:{duration:300}
+    }
+  });
+}
+
+function updateModalChart(cam){
+  if(!modalChartInst)return;
+  const hist=cam.history||[];
+  modalChartInst.data.labels=hist.map(h=>h.t);
+  modalChartInst.data.datasets[0].data=hist.map(h=>h.c);
+  modalChartInst.update("none");
+}
+
+// ─── SOCKET ────────────────────────────────────────────────────────────────
+function setConn(on){document.getElementById("cdot").classList.toggle("on",on);document.getElementById("ctext").textContent=on?"Connected":"Reconnecting…"}
+
+function connectSocket(){
+  socket=io(API,{path:"/ws"});
+  socket.on("connect",()=>setConn(true));
+  socket.on("disconnect",()=>setConn(false));
+  socket.on("broadcast_data",d=>{if(!cameras.length)return;applyUpdate(cameras[0],d)});
+  socket.on("multi_camera_data",d=>{if(!d.cameras)return;d.cameras.forEach(u=>{const cam=cameras.find(c=>c.id===u.id);if(!cam)return;applyUpdate(cam,{count:u.count,trend_per_min:u.trend,alert_status:u.status,cluster_count:cam.clusterCount,largest_cluster:cam.largestCluster,congestion_score:cam.congestion,risk_score:cam.riskScore})})});
+}
+
+function applyUpdate(cam,d){
+  const prev=cam.status;
+  cam.count=d.count||0;cam.trend=d.trend_per_min||0;cam.status=d.alert_status||"SAFE";
+  cam.clusterCount=d.cluster_count||cam.clusterCount||0;
+  cam.largestCluster=d.largest_cluster||cam.largestCluster||0;
+  cam.congestion=d.congestion_score||cam.congestion||0;
+  cam.riskScore=d.risk_score||cam.riskScore||0;
+  cam.peak=Math.max(cam.peak||0,cam.count);cam.sum=(cam.sum||0)+cam.count;cam.n=(cam.n||0)+1;
+  if(!cam.history)cam.history=[];
+  const t=new Date().toLocaleTimeString([],{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+  cam.history.push({t,c:cam.count});if(cam.history.length>60)cam.history.shift();
+
+  // Track session max risk
+  if(cam.riskScore>sessionMaxRisk){sessionMaxRisk=cam.riskScore;const el=document.getElementById("opsMaxRisk");if(el)el.textContent=sessionMaxRisk}
+
+  // ── ALERTS ONLY: fire only on DANGER threshold crossings ──
+  if(cam.status!==prev){
+    if(cam.status==="DANGER"){
+      // Enter DANGER → add to active alerts, log it
+      activeAlerts[cam.id]={cam,count:cam.count,time:t};
+      totalAlertsFired++;
+      alertDismissed=false;
+      pushAlertLog(cam,cam.count,t);
+      updateBellBadge();renderActiveAlerts();
+    } else if(cam.status==="SAFE"&&prev==="DANGER"){
+      // Resolved → remove from active, log the resolution
+      delete activeAlerts[cam.id];
+      pushAlertLog(cam,null,t); // null count = resolved entry
+      updateBellBadge();renderActiveAlerts();
+    }
+    // MODERATE transitions are silent — no log entry, no badge change
+  }
+
+  patchCard(cam);updateSummary();
+  if(openCamId===cam.id){refreshModalData(cam);updateModalChart(cam)}
+}
+
+// ─── INIT ──────────────────────────────────────────────────────────────────
+(async()=>{
+  const{data}=await sb.auth.getSession();
+  if(data?.session){document.getElementById("userLbl").textContent=data.session.user.email;await loadCfg();loadCamerasFromStorage();go("setup")}
+  else go("home");
+})();
+</script>
+</body>
+</html>
